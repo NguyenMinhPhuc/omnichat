@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -25,20 +26,47 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Check user role and redirect
+      // Check user status before allowing login
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
+
+        if (userData.status === 'pending') {
+          await auth.signOut(); // Sign out the user immediately
+          toast({
+            title: 'Login Failed',
+            description: 'Your account is pending approval. Please wait for an admin to approve it.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        if (userData.status === 'banned') {
+            await auth.signOut();
+            toast({
+                title: 'Login Failed',
+                description: 'Your account has been banned. Please contact support.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        // If status is active, proceed to dashboard
         if (userData.role === 'admin') {
           router.push('/admin/dashboard');
         } else {
           router.push('/dashboard');
         }
       } else {
-        // Fallback if doc doesn't exist for some reason
-        router.push('/dashboard');
+         // This case should ideally not happen if signup creates a doc
+        await auth.signOut();
+        toast({
+            title: 'Login Failed',
+            description: 'User data not found. Please contact support.',
+            variant: 'destructive',
+        });
       }
     } catch (error: any) {
       toast({

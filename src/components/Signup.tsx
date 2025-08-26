@@ -31,7 +31,7 @@ export default function Signup() {
         email: user.email,
         displayName: user.email?.split('@')[0] || 'New User',
         role: 'user', // Default role
-        status: 'active', // Default status
+        status: 'pending', // Default status is now pending
         avatarUrl: null,
         customization: {
           primaryColor: '#29ABE2',
@@ -42,7 +42,15 @@ export default function Signup() {
         knowledgeBase: ''
       });
 
-      router.push('/dashboard');
+      // Sign out the user immediately after signup, as they need to be approved
+      await auth.signOut();
+
+      toast({
+          title: 'Signup Successful',
+          description: "Your account has been created and is awaiting approval from an administrator. You will be able to log in once approved."
+      });
+
+      router.push('/'); // Redirect to login page after showing the message
     } catch (error: any) {
       toast({
         title: 'Signup Failed',
