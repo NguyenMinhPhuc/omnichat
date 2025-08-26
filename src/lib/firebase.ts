@@ -13,20 +13,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Initialize Firebase
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
-// Initialize Firebase only if the config is valid
-if (firebaseConfig.projectId) {
+if (typeof window !== 'undefined') {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-} else {
-    // Provide mock objects or handle the uninitialized state gracefully
-    console.warn("Firebase config not found, using placeholder services.");
-    // You might want to define mock objects for 'app', 'auth', and 'db' here
-    // for environments where Firebase is not configured.
 }
 
+// @ts-ignore
 export { app, auth, db };
