@@ -136,11 +136,9 @@ export default function Dashboard() {
       <SidebarInset>
         <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-            <div className="flex items-center gap-2 md:hidden">
-              <SidebarTrigger />
-            </div>
-             <div className="flex items-center gap-2">
-                <h1 className="font-semibold text-lg">Welcome, {user.email}</h1>
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="hidden md:flex" />
+              <h1 className="font-semibold text-lg">Welcome, {user.email}</h1>
             </div>
             <div className="flex-1" />
             <button onClick={logout} className="flex items-center gap-2 text-sm text-foreground hover:text-primary">
