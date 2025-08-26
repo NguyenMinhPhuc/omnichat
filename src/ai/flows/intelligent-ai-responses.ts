@@ -73,7 +73,6 @@ const intelligentAIResponseFlow = ai.defineFlow(
         return { response: "No knowledge base has been configured for this chatbot." };
     }
 
-    // This is the critical fix: `await` ensures we wait for the AI to respond.
     const {output} = await prompt({ query, knowledgeBase });
     return output!;
   }
