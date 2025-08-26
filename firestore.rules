@@ -1,27 +1,39 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper function to get user data
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+    
     // Helper function to check if a user is an admin
     function isAdmin(userId) {
-      return exists(/databases/$(database)/documents/users/$(userId)) &&
-             get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+      return getUserData(userId).role == 'admin';
     }
 
     match /users/{userId} {
-      // Allow users to read and update their own document
-      allow read, update: if request.auth != null && request.auth.uid == userId;
+      // Allow create access for new user signups
+      allow create: if request.auth.uid == userId;
+
+      // Allow read/update access for the user who owns the document
+      allow read, update: if request.auth.uid == userId;
       
-      // Allow admins to read, create, update, and delete any user document
+      // Admins can read, write, and delete any user document
       allow read, write, delete: if request.auth != null && isAdmin(request.auth.uid);
     }
-    
+
     match /chats/{chatId} {
-      // Allow anyone to create a new chat session
-      allow create: if true;
-      // Allow anyone to read and update chat sessions (for the live chatbot)
-      // In a production app, you might want to restrict this further
-      allow read, update: if true;
+      // Allow users to create new chat sessions
+      allow create: if request.auth != null;
+      
+      // Allow users to read and update their own chat sessions
+      // (assuming chatbotId is the user's UID)
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.chatbotId;
+
+      // Admins can view any chat history
+      allow read: if request.auth != null && isAdmin(request.auth.uid);
     }
   }
 }
