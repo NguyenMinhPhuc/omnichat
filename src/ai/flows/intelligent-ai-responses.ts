@@ -36,6 +36,7 @@ export async function intelligentAIResponse(input: IntelligentAIResponseInput): 
 
 const prompt = ai.definePrompt({
   name: 'intelligentAIResponsePrompt',
+  model: 'googleai/gemini-pro',
   input: { schema: z.object({
     query: z.string(),
     knowledgeBase: z.string(),
