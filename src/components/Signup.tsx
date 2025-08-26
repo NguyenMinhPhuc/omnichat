@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,20 @@ export default function Signup() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Create user document in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        customization: {
+          primaryColor: '#29ABE2',
+          backgroundColor: '#F0F8FF',
+          accentColor: '#6495ED',
+          logoUrl: null,
+        },
+        knowledgeBase: ''
+      });
+
       router.push('/dashboard');
     } catch (error: any) {
       toast({

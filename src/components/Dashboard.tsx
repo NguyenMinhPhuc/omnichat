@@ -8,7 +8,7 @@ import { getAIResponse } from '@/app/actions';
 import type { Message } from './ChatbotPreview';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import EmbedGuide from './EmbedGuide';
 
@@ -58,17 +58,11 @@ export default function Dashboard() {
           if (data.knowledgeBase) {
             setKnowledgeBase(data.knowledgeBase);
           }
-        } else {
-          // Create initial document if it doesn't exist
-          await setDoc(userDocRef, { 
-            customization,
-            knowledgeBase: '' 
-          });
         }
       };
       fetchUserData();
     }
-  }, [user, customization]);
+  }, [user]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || !user) return;
