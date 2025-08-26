@@ -20,6 +20,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
@@ -88,7 +89,7 @@ export default function AdminDashboard() {
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center gap-2 font-headline">
             <Bot className="h-8 w-8 text-primary" />
@@ -109,6 +110,7 @@ export default function AdminDashboard() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
+        <SidebarRail />
       </Sidebar>
 
       <SidebarInset>
