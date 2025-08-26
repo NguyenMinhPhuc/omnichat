@@ -34,5 +34,17 @@ export default function DashboardPage() {
     return <div>Loading...</div>; // Or a loading spinner
   }
   
+  // Regular users will see this
+  const userDocRef = user ? doc(db, 'users', user.uid) : null;
+  if (userDocRef) {
+      getDoc(userDocRef).then(doc => {
+          if (doc.exists() && doc.data().role === 'admin') {
+              // This is an admin, but the redirect hasn't happened yet.
+              // Show loading to prevent flicker of the user dashboard.
+              return <div>Loading...</div>;
+          }
+      })
+  }
+
   return <Dashboard />;
 }
