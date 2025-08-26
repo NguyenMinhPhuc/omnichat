@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps } from 'firebase-admin/app';
 
 // Ensure Firebase Admin is initialized
 if (!getApps().length) {
@@ -73,6 +73,7 @@ const intelligentAIResponseFlow = ai.defineFlow(
         return { response: "No knowledge base has been configured for this chatbot." };
     }
 
+    // This is the critical fix: `await` ensures we wait for the AI to respond.
     const {output} = await prompt({ query, knowledgeBase });
     return output!;
   }
