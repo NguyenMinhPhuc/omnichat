@@ -1,32 +1,14 @@
-
 import 'dotenv/config';
-import type {NextConfig} from 'next';
 
 /** @type {import('next').NextConfig} */
-const nextConfig: NextConfig = {
-  /* config options here */
+const config = {
   typescript: {
+    // !! WARN !!
+    // Dangerously allow production builds to successfully complete even if
+    // your project has type errors.
+    // !! WARN !!
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**',
-      },
-    ],
   },
 };
 
-export default nextConfig;
+export default config;
