@@ -1,20 +1,23 @@
 'use client'
 
 import LiveChatbot from "@/components/LiveChatbot";
-import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-function ChatbotPageContent() {
-  const searchParams = useSearchParams();
-  const chatId = searchParams.get('chatId');
+// The `params` object is passed automatically by Next.js for dynamic routes.
+export default function ChatbotPage({ params }: { params: { id: string } }) {
+    const chatbotId = params.id;
 
-  return <LiveChatbot chatbotId={chatId!} />;
-}
+    if (!chatbotId) {
+        return (
+             <Suspense fallback={<div>Loading...</div>}>
+                <div>Chatbot ID is missing.</div>
+            </Suspense>
+        )
+    }
 
-export default function ChatbotPage() {
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <ChatbotPageContent />
+           <LiveChatbot chatbotId={chatbotId} />
         </Suspense>
     )
 }
