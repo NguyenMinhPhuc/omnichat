@@ -108,66 +108,67 @@ export default function Dashboard() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-background">
-         <Sidebar>
-          <SidebarHeader>
-            <div className="flex items-center gap-2 font-headline">
-              <Bot className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-foreground">
-                OmniChat
-              </h1>
-            </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive>
-                  <Link href="/dashboard">
-                    <Settings />
-                    Configuration
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2 font-headline">
+            <Bot className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-bold text-foreground">
+              OmniChat
+            </h1>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive>
+                <Link href="/dashboard">
+                  <Settings />
+                  Configuration
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
 
-        <SidebarInset>
-          <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-              <div className="flex items-center gap-2 md:hidden">
-                <SidebarTrigger />
-              </div>
-              <div className="flex-1" />
-              <button onClick={logout} className="flex items-center gap-2 text-sm text-foreground hover:text-primary">
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
+      <SidebarInset>
+        <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+            <div className="flex items-center gap-2 md:hidden">
+              <SidebarTrigger />
             </div>
-          </header>
-          <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <CustomizationPanel
+             <div className="flex items-center gap-2">
+                <h1 className="font-semibold text-lg">Welcome, {user.email}</h1>
+            </div>
+            <div className="flex-1" />
+            <button onClick={logout} className="flex items-center gap-2 text-sm text-foreground hover:text-primary">
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
+        </header>
+        <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <CustomizationPanel
+              customization={customization}
+              setCustomization={setCustomization}
+              setKnowledgeBase={setKnowledgeBase}
+              chatbotId={user.uid}
+            />
+            <Card>
+              <ChatbotPreview
                 customization={customization}
-                setCustomization={setCustomization}
-                setKnowledgeBase={setKnowledgeBase}
-                chatbotId={user.uid}
+                messages={messages}
+                isAiTyping={isAiTyping}
+                onSendMessage={handleSendMessage}
               />
-              <Card>
-                <ChatbotPreview
-                  customization={customization}
-                  messages={messages}
-                  isAiTyping={isAiTyping}
-                  onSendMessage={handleSendMessage}
-                />
-              </Card>
-            </div>
-            <div>
-                <EmbedGuide chatbotId={user.uid} />
-            </div>
-          </main>
-        </SidebarInset>
-      </div>
+            </Card>
+          </div>
+          <div>
+              <EmbedGuide chatbotId={user.uid} />
+          </div>
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }
