@@ -46,21 +46,24 @@ export default function AdminDashboard() {
       getDoc(userDocRef).then(userDoc => {
          if (!userDoc.exists() || userDoc.data().role !== 'admin') {
              router.push('/dashboard');
+         } else {
+            fetchUsers();
          }
       });
     }
   }, [user, loading, router]);
   
   const fetchUsers = async () => {
-    const usersCollection = collection(db, 'users');
-    const userSnapshot = await getDocs(usersCollection);
-    const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserData));
-    setUsers(userList);
+    try {
+        const usersCollection = collection(db, 'users');
+        const userSnapshot = await getDocs(usersCollection);
+        const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserData));
+        setUsers(userList);
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        toast({ title: 'Error', description: 'Could not fetch user data.', variant: 'destructive'});
+    }
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
   
   const handleRoleChange = async (userId: string, role: 'admin' | 'user') => {
     const userDoc = doc(db, 'users', userId);
