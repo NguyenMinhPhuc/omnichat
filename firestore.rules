@@ -1,36 +1,23 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow anyone to read user profiles (needed for the embedded chatbot to fetch configuration)
-      allow get: if true;
-      
-      // Allow authenticated users to create their own user document upon signup
-      allow create: if request.auth.uid != null;
-
-      // Allow users to read, update, or delete their own document
-      allow read, update, delete: if request.auth.uid == userId;
-
-      // Admin rules: Admins can read and write any user document
-      allow read, write: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Allow public read of customization and knowledge base for the chatbot
+      allow read: if true;
+      // Allow user to create and update their own document
+      allow write: if request.auth.uid == userId;
     }
 
-    // Rules for the 'chats' collection
     match /chats/{chatId} {
-      // A user can read their own chat sessions. Admins can read any chat session.
-      allow get, list: if request.auth.uid == resource.data.chatbotId ||
-                       (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-
-      // Anyone can create a new chat session (for the live/embedded chatbot)
+      // User can only read their own chat history
+      allow read: if request.auth.uid == resource.data.chatbotId;
+      // Anyone can create a new chat session (for embedded chatbot)
       allow create: if true;
-
-      // Only the chatbot owner can update (add messages to) their chat session
-      // This is a simplified rule. In a real app, you might want to allow the end-user (unauthenticated) to update the session too.
-      // But for this app's flow, updates are driven by the owner's AI.
-      allow update: if request.auth.uid == resource.data.chatbotId;
+      // Allow anyone to add messages to the chat history
+      allow update: if true;
+      // Only the chatbot owner can delete the history
+      allow delete: if request.auth.uid == resource.data.chatbotId;
     }
   }
 }
