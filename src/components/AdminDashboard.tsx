@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -92,8 +93,8 @@ export default function AdminDashboard() {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center gap-2 font-headline">
-            <Bot className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">
+            <Bot className="h-8 w-8 text-primary shrink-0" />
+            <h1 className="text-2xl font-bold text-foreground group-data-[collapsible=icon]:hidden">
               OmniChat
             </h1>
           </div>
