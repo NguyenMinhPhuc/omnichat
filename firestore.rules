@@ -2,22 +2,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      // Allow public read of customization and knowledge base for the chatbot
-      allow read: if true;
-      // Allow user to create and update their own document
-      allow write: if request.auth.uid == userId;
+    // Helper function to check if a user is an admin
+    function isAdmin(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
     }
 
+    match /users/{userId} {
+      // Allow users to read and update their own document
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow admins to read, create, update, and delete any user document
+      allow read, write, delete: if request.auth != null && isAdmin(request.auth.uid);
+    }
+    
     match /chats/{chatId} {
-      // User can only read their own chat history
-      allow read: if request.auth.uid == resource.data.chatbotId;
-      // Anyone can create a new chat session (for embedded chatbot)
+      // Allow anyone to create a new chat session
       allow create: if true;
-      // Allow anyone to add messages to the chat history
-      allow update: if true;
-      // Only the chatbot owner can delete the history
-      allow delete: if request.auth.uid == resource.data.chatbotId;
+      // Allow anyone to read and update chat sessions (for the live chatbot)
+      // In a production app, you might want to restrict this further
+      allow read, update: if true;
     }
   }
 }
