@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, LogOut, Settings, Eye } from 'lucide-react';
+import { Bot, LogOut, Settings } from 'lucide-react';
 import CustomizationPanel from './CustomizationPanel';
 import ChatbotPreview from './ChatbotPreview';
 import { getAIResponse } from '@/app/actions';
