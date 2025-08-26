@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, LogOut, Settings } from 'lucide-react';
+import { Bot, LogOut, Settings, User } from 'lucide-react';
 import CustomizationPanel from './CustomizationPanel';
 import ChatbotPreview from './ChatbotPreview';
 import { getAIResponse } from '@/app/actions';
@@ -10,7 +10,7 @@ import type { Message } from './ChatbotPreview';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import EmbedGuide from './EmbedGuide';
 import {
   Sidebar,
@@ -26,6 +26,19 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Card } from './ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from './ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { sendPasswordResetEmail } from 'firebase/auth';
+
 
 export interface CustomizationState {
   primaryColor: string;
@@ -37,6 +50,8 @@ export interface CustomizationState {
 export default function Dashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
+
 
   const [customization, setCustomization] = useState<CustomizationState>({
     primaryColor: '#29ABE2',
@@ -53,6 +68,8 @@ export default function Dashboard() {
     },
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [userRole, setUserRole] = useState<'user' | null>(null);
+
 
   useEffect(() => {
     if (!loading && !user) {
@@ -74,6 +91,7 @@ export default function Dashboard() {
             router.push('/admin/dashboard');
             return;
           }
+          setUserRole(data.role);
           if (data.knowledgeBase) {
             setKnowledgeBase(data.knowledgeBase);
           }
@@ -102,6 +120,18 @@ export default function Dashboard() {
     const aiMessage: Message = { sender: 'ai', text: aiResult.response };
     setMessages(prev => [...prev, aiMessage]);
     setIsAiTyping(false);
+  };
+
+  const handlePasswordReset = () => {
+    if (user && user.email) {
+      sendPasswordResetEmail(auth, user.email)
+        .then(() => {
+          toast({ title: 'Password Reset Email Sent', description: 'Check your inbox to reset your password.' });
+        })
+        .catch((error) => {
+          toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        });
+    }
   };
   
   if (loading || !user) {
@@ -141,13 +171,37 @@ export default function Dashboard() {
               <SidebarTrigger className="hidden md:flex" />
               <h1 className="font-semibold text-lg">Dashboard</h1>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">{user.email}</span>
-              <button onClick={logout} className="flex items-center gap-2 text-sm text-foreground hover:text-primary">
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
-            </div>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback>
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.email}</p>
+                       <p className="text-xs leading-none text-muted-foreground capitalize">
+                        {userRole}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handlePasswordReset}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Change Password</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
         </header>
         <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">

@@ -4,14 +4,14 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, LogOut, Trash2, Users } from 'lucide-react';
+import { Bot, LogOut, ShieldCheck, Trash2, User, Users } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +25,16 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 interface UserData {
   id: string;
@@ -37,6 +47,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [users, setUsers] = useState<UserData[]>([]);
   const { toast } = useToast();
+  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,6 +58,7 @@ export default function AdminDashboard() {
          if (!userDoc.exists() || userDoc.data().role !== 'admin') {
              router.push('/dashboard');
          } else {
+            setUserRole(userDoc.data().role);
             fetchUsers();
          }
       });
@@ -86,6 +98,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const handlePasswordReset = () => {
+    if (user && user.email) {
+      sendPasswordResetEmail(auth, user.email)
+        .then(() => {
+          toast({ title: 'Password Reset Email Sent', description: 'Check your inbox to reset your password.' });
+        })
+        .catch((error) => {
+          toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        });
+    }
+  };
+
+
   if (loading || !user) {
     return <div>Loading...</div>;
   }
@@ -123,13 +148,41 @@ export default function AdminDashboard() {
               <SidebarTrigger className="hidden md:flex" />
               <h1 className="font-semibold text-lg">Admin Panel</h1>
             </div>
-            <div className="flex items-center gap-4">
-               <span className="text-sm text-muted-foreground">{user.email}</span>
-               <button onClick={logout} className="flex items-center gap-2 text-sm text-foreground hover:text-primary">
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
-            </div>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback>
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.email}</p>
+                      <p className="text-xs leading-none text-muted-foreground capitalize flex items-center gap-1">
+                         <ShieldCheck className='w-3 h-3 text-primary' /> {userRole}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>User Management</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handlePasswordReset}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Change Password</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
         </header>
         <main className="container mx-auto p-4 sm:p-6 lg:p-8">
