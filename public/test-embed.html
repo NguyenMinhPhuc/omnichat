@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Chatbot Embed</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        iframe {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Chatbot Embed</h1>
+    <p><strong>Important:</strong> You must replace "[YOUR_CHATBOT_ID]" in the iframe's src URL below with your actual chatbot ID.</p>
+    <iframe
+      src="/chatbot/[YOUR_CHATBOT_ID]"
+      width="400"
+      height="600"
+      frameborder="0"
+    ></iframe>
+    <script>
+      // A small helper script to remind the user to change the ID.
+      const iframe = document.querySelector('iframe');
+      if (iframe.src.includes('[YOUR_CHATBOT_ID]')) {
+          const p = document.createElement('p');
+          p.style.color = 'red';
+          p.style.fontWeight = 'bold';
+          p.textContent = 'Please edit this file (public/test-embed.html) and replace [YOUR_CHATBOT_ID] with your real ID to see the chatbot.';
+          iframe.insertAdjacentElement('afterend', p);
+      }
+    </script>
+</body>
+</html>
