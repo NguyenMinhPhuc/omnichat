@@ -1,0 +1,16 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      // Allow anyone to read the chatbot configuration
+      allow get: if true;
+      
+      // Allow authenticated users to create their own document
+      allow create: if request.auth.uid != null;
+      
+      // Allow authenticated users to update only their own document
+      allow update: if request.auth.uid == userId;
+    }
+  }
+}
