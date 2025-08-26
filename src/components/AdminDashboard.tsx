@@ -93,7 +93,7 @@ export default function AdminDashboard() {
             fetchUsers();
             toast({ title: 'User Deleted', description: 'User has been removed from Firestore.' });
         } catch (error: any) {
-            toast({ title: 'Error', description: error.message, variant = 'destructive' });
+            toast({ title: 'Error', description: error.message, variant: 'destructive' });
         }
     }
   };
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
           toast({ title: 'Password Reset Email Sent', description: 'Check your inbox to reset your password.' });
         })
         .catch((error) => {
-          toast({ title: 'Error', description: error.message, variant = 'destructive' });
+          toast({ title: 'Error', description: error.message, variant: 'destructive' });
         });
     }
   };
@@ -231,5 +231,3 @@ export default function AdminDashboard() {
     </SidebarProvider>
   );
 }
-
-    
