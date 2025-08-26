@@ -44,6 +44,7 @@ export default function ChatbotPreview({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!inputValue.trim()) return;
     onSendMessage(inputValue);
     setInputValue('');
   };
@@ -55,7 +56,7 @@ export default function ChatbotPreview({
   } as React.CSSProperties;
 
   return (
-    <Card className="h-[70vh] flex flex-col shadow-lg" style={customStyles}>
+    <div className="h-[70vh] flex flex-col" style={customStyles}>
       <CardHeader className="flex flex-row items-center justify-between p-4 border-b bg-[--chat-primary-color] text-primary-foreground rounded-t-lg">
         <div className="flex items-center space-x-3">
           <Logo logoUrl={customization.logoUrl} />
@@ -129,6 +130,6 @@ export default function ChatbotPreview({
           </Button>
         </form>
       </CardFooter>
-    </Card>
+    </div>
   );
 }
