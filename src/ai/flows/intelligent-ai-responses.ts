@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
 
 // Ensure Firebase Admin is initialized
 if (!getApps().length) {
@@ -36,7 +36,7 @@ export async function intelligentAIResponse(input: IntelligentAIResponseInput): 
 
 const prompt = ai.definePrompt({
   name: 'intelligentAIResponsePrompt',
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: { schema: z.object({
     query: z.string(),
     knowledgeBase: z.string(),
