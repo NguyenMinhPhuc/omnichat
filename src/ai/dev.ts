@@ -1,1 +1,5 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/knowledge-base-ingestion.ts';
+import '@/ai/flows/intelligent-ai-responses.ts';
