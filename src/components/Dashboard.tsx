@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -145,27 +146,25 @@ export default function Dashboard() {
               </button>
             </div>
           </header>
-          <main className="container mx-auto p-4 sm:p-6 lg:p-8">
+          <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-8">
-                <CustomizationPanel
+              <CustomizationPanel
+                customization={customization}
+                setCustomization={setCustomization}
+                setKnowledgeBase={setKnowledgeBase}
+                chatbotId={user.uid}
+              />
+              <Card>
+                <ChatbotPreview
                   customization={customization}
-                  setCustomization={setCustomization}
-                  setKnowledgeBase={setKnowledgeBase}
-                  chatbotId={user.uid}
+                  messages={messages}
+                  isAiTyping={isAiTyping}
+                  onSendMessage={handleSendMessage}
                 />
+              </Card>
+            </div>
+            <div>
                 <EmbedGuide chatbotId={user.uid} />
-              </div>
-              <div>
-                 <Card>
-                    <ChatbotPreview
-                      customization={customization}
-                      messages={messages}
-                      isAiTyping={isAiTyping}
-                      onSendMessage={handleSendMessage}
-                    />
-                </Card>
-              </div>
             </div>
           </main>
         </SidebarInset>
