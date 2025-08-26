@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/context/AuthContext';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: 'OmniChat',
@@ -22,7 +23,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          {children}
+            <Suspense fallback={<div>Loading...</div>}>
+                {children}
+            </Suspense>
           <Toaster />
         </AuthProvider>
       </body>

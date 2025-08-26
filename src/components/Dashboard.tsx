@@ -55,6 +55,10 @@ export default function Dashboard() {
           if (data.customization) {
             setCustomization(data.customization);
           }
+           if (data.role === 'admin') {
+            router.push('/admin/dashboard');
+            return;
+          }
           if (data.knowledgeBase) {
             setKnowledgeBase(data.knowledgeBase);
           }
@@ -62,7 +66,7 @@ export default function Dashboard() {
       };
       fetchUserData();
     }
-  }, [user]);
+  }, [user, router]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || !user) return;
@@ -112,6 +116,7 @@ export default function Dashboard() {
               customization={customization}
               setCustomization={setCustomization}
               setKnowledgeBase={setKnowledgeBase}
+              chatbotId={user.uid}
             />
             <EmbedGuide chatbotId={user.uid} />
           </div>

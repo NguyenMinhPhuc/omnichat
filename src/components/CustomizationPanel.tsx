@@ -1,29 +1,31 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Palette, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { Upload, Palette, FileText, History } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { handleDocumentIngestion } from '@/app/actions';
 import type { CustomizationState } from './Dashboard';
 import { useAuth } from '@/context/AuthContext';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import ChatHistory from './ChatHistory';
 
 interface CustomizationPanelProps {
   customization: CustomizationState;
   setCustomization: React.Dispatch<React.SetStateAction<CustomizationState>>;
   setKnowledgeBase: (kb: string) => void;
+  chatbotId: string;
 }
 
 export default function CustomizationPanel({
   customization,
   setCustomization,
   setKnowledgeBase,
+  chatbotId,
 }: CustomizationPanelProps) {
   const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
@@ -101,13 +103,14 @@ export default function CustomizationPanel({
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Chatbot Configuration</CardTitle>
-        <CardDescription>Upload content and customize the look of your chatbot.</CardDescription>
+        <CardDescription>Upload content, customize the look, and view history.</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="content">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="content"><FileText className="mr-2 h-4 w-4" /> Content</TabsTrigger>
             <TabsTrigger value="appearance"><Palette className="mr-2 h-4 w-4" /> Appearance</TabsTrigger>
+            <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> Chat History</TabsTrigger>
           </TabsList>
           <TabsContent value="content" className="pt-4">
             <div className="space-y-4">
@@ -141,6 +144,9 @@ export default function CustomizationPanel({
                 <Input id="logo" type="file" onChange={handleLogoChange} accept="image/*" />
               </div>
             </div>
+          </TabsContent>
+           <TabsContent value="history" className="pt-4">
+            <ChatHistory chatbotId={chatbotId} />
           </TabsContent>
         </Tabs>
       </CardContent>

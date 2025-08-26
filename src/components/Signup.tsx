@@ -25,8 +25,10 @@ export default function Signup() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Create user document in Firestore
+      // Create user document in Firestore with default 'user' role
       await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        role: 'user', // Default role
         customization: {
           primaryColor: '#29ABE2',
           backgroundColor: '#F0F8FF',

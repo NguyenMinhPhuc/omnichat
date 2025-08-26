@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,8 +22,24 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Check user role and redirect
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
+      } else {
+        // Fallback if doc doesn't exist for some reason
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       toast({
         title: 'Login Failed',

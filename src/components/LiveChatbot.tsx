@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader } from 'lucide-react';
+import { Send, Bot, User } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import { getAIResponse } from '@/app/actions';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Message {
@@ -40,10 +40,15 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [chatId, setChatId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchChatbotConfig = async () => {
+      if (!chatbotId) {
+        setError("Invalid chatbot ID.");
+        return;
+      }
       try {
         const docRef = doc(db, "users", chatbotId);
         const docSnap = await getDoc(docRef);
@@ -72,18 +77,55 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     setInputValue(e.target.value);
   };
 
+  const createNewChatSession = async (initialMessage: Message) => {
+    try {
+        const chatCollectionRef = collection(db, 'chats');
+        const docRef = await addDoc(chatCollectionRef, {
+            chatbotId: chatbotId,
+            createdAt: serverTimestamp(),
+            messages: [initialMessage],
+        });
+        setChatId(docRef.id);
+        return docRef.id;
+    } catch(e) {
+        console.error("Error creating chat session: ", e);
+        setError("Could not start a new chat session.");
+        return null;
+    }
+  }
+
+  const addMessageToChat = async (chatSessionId: string, message: Message) => {
+    const chatDocRef = doc(db, 'chats', chatSessionId);
+    await updateDoc(chatDocRef, {
+      messages: arrayUnion(message)
+    });
+  }
+
   const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !chatbotId) return;
 
     const userMessage: Message = { sender: 'user', text };
     setMessages(prev => [...prev, userMessage]);
     setIsAiTyping(true);
     setInputValue('');
 
+    let currentChatId = chatId;
+    if (!currentChatId) {
+        currentChatId = await createNewChatSession(userMessage);
+    } else {
+        await addMessageToChat(currentChatId, userMessage);
+    }
+
+    if (!currentChatId) {
+        setIsAiTyping(false);
+        return;
+    }
+
     const aiResult = await getAIResponse({ query: text, userId: chatbotId });
     
     const aiMessage: Message = { sender: 'ai', text: aiResult.response };
     setMessages(prev => [...prev, aiMessage]);
+    await addMessageToChat(currentChatId, aiMessage);
     setIsAiTyping(false);
   };
   
