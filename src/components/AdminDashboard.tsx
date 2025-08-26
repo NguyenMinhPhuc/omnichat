@@ -33,7 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { sendPasswordResetEmail } from 'firebase/auth';
 
 interface UserData {
@@ -93,7 +93,7 @@ export default function AdminDashboard() {
             fetchUsers();
             toast({ title: 'User Deleted', description: 'User has been removed from Firestore.' });
         } catch (error: any) {
-            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+            toast({ title: 'Error', description: error.message, variant = 'destructive' });
         }
     }
   };
@@ -105,13 +105,13 @@ export default function AdminDashboard() {
           toast({ title: 'Password Reset Email Sent', description: 'Check your inbox to reset your password.' });
         })
         .catch((error) => {
-          toast({ title: 'Error', description: error.message, variant: 'destructive' });
+          toast({ title: 'Error', description: error.message, variant = 'destructive' });
         });
     }
   };
 
 
-  if (loading || !user) {
+  if (loading || !user || !userRole) {
     return <div>Loading...</div>;
   }
 
@@ -231,3 +231,5 @@ export default function AdminDashboard() {
     </SidebarProvider>
   );
 }
+
+    
