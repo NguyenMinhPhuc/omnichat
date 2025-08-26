@@ -118,13 +118,15 @@ export default function AdminDashboard() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="hidden md:flex" />
-              <h1 className="font-semibold text-lg">Welcome, {user.email}</h1>
+              <h1 className="font-semibold text-lg">Admin Panel</h1>
             </div>
-            <div className="flex-1" />
-            <button onClick={logout} className="flex items-center gap-2 text-sm text-foreground hover:text-primary">
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
+            <div className="flex items-center gap-4">
+               <span className="text-sm text-muted-foreground">{user.email}</span>
+               <button onClick={logout} className="flex items-center gap-2 text-sm text-foreground hover:text-primary">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </div>
           </div>
         </header>
         <main className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -138,7 +140,7 @@ export default function AdminDashboard() {
                   <TableRow>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -156,9 +158,10 @@ export default function AdminDashboard() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                           <Button variant="destructive" size="icon" onClick={() => handleDeleteUser(u.id)} disabled={u.id === user.uid}>
                               <Trash2 className="h-4 w-4" />
+                               <span className="sr-only">Delete User</span>
                           </Button>
                       </TableCell>
                     </TableRow>
