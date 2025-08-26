@@ -1,11 +1,12 @@
 'use client'
 
 import LiveChatbot from "@/components/LiveChatbot";
-import { Suspense } from "react";
+import { Suspense, use } from "react";
 
 // The `params` object is passed automatically by Next.js for dynamic routes.
-export default function ChatbotPage({ params }: { params: { id: string } }) {
-    const chatbotId = params.id;
+// It is now a Promise, so we use `use()` to unwrap it.
+export default function ChatbotPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id: chatbotId } = use(params);
 
     if (!chatbotId) {
         return (
