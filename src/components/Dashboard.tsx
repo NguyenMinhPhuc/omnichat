@@ -10,7 +10,7 @@ import type { Message } from './ChatbotPreview';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import EmbedGuide from './EmbedGuide';
 import {
   Sidebar,
@@ -36,9 +36,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from './ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { sendPasswordResetEmail } from 'firebase/auth';
-
 
 export interface CustomizationState {
   primaryColor: string;
@@ -50,8 +47,6 @@ export interface CustomizationState {
 export default function Dashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
-
 
   const [customization, setCustomization] = useState<CustomizationState>({
     primaryColor: '#29ABE2',
@@ -121,18 +116,6 @@ export default function Dashboard() {
     setMessages(prev => [...prev, aiMessage]);
     setIsAiTyping(false);
   };
-
-  const handlePasswordReset = () => {
-    if (user && user.email) {
-      sendPasswordResetEmail(auth, user.email)
-        .then(() => {
-          toast({ title: 'Password Reset Email Sent', description: 'Check your inbox to reset your password.' });
-        })
-        .catch((error) => {
-          toast({ title: 'Error', description: error.message, variant: 'destructive' });
-        });
-    }
-  };
   
   if (loading || !user) {
     return <div>Loading...</div>; // Or a loading spinner
@@ -156,6 +139,14 @@ export default function Dashboard() {
                 <Link href="/dashboard">
                   <Settings />
                   Configuration
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/profile">
+                  <User />
+                  Profile
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -191,9 +182,9 @@ export default function Dashboard() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handlePasswordReset}>
+                  <DropdownMenuItem onClick={() => router.push('/profile')}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Change Password</span>
+                    <span>Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout}>

@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +34,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { sendPasswordResetEmail } from 'firebase/auth';
 
 interface UserData {
   id: string;
@@ -98,19 +97,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handlePasswordReset = () => {
-    if (user && user.email) {
-      sendPasswordResetEmail(auth, user.email)
-        .then(() => {
-          toast({ title: 'Password Reset Email Sent', description: 'Check your inbox to reset your password.' });
-        })
-        .catch((error) => {
-          toast({ title: 'Error', description: error.message, variant: 'destructive' });
-        });
-    }
-  };
-
-
   if (loading || !user || !userRole) {
     return <div>Loading...</div>;
   }
@@ -133,6 +119,14 @@ export default function AdminDashboard() {
                 <Link href="/admin/dashboard">
                   <Users />
                   User Management
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/profile">
+                  <User />
+                  Profile
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -172,9 +166,9 @@ export default function AdminDashboard() {
                     <Users className="mr-2 h-4 w-4" />
                     <span>User Management</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handlePasswordReset}>
+                  <DropdownMenuItem onClick={() => router.push('/profile')}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Change Password</span>
+                    <span>Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout}>
