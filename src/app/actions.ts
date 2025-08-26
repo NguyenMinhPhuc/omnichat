@@ -1,16 +1,11 @@
 'use server'
 
-import { knowledgeBaseIngestion, KnowledgeBaseIngestionInput } from '@/ai/flows/knowledge-base-ingestion'
 import { intelligentAIResponse, IntelligentAIResponseInput } from '@/ai/flows/intelligent-ai-responses'
 
-export async function handleDocumentIngestion(input: KnowledgeBaseIngestionInput) {
-  try {
-    const result = await knowledgeBaseIngestion(input);
-    return result;
-  } catch (error) {
-    console.error("Error during document ingestion:", error);
-    return { success: false, message: "An unexpected error occurred." };
-  }
+// Note: handleDocumentIngestion is no longer needed here as logic is in CustomizationPanel.
+// It can be removed in the future if no longer referenced.
+export async function handleDocumentIngestion() {
+    return { success: true, message: "Handled directly in client." };
 }
 
 export async function getAIResponse(input: IntelligentAIResponseInput) {

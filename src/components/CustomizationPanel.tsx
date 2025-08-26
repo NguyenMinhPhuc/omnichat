@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Palette, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,6 +10,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { handleDocumentIngestion } from '@/app/actions';
 import type { CustomizationState } from './Dashboard';
+import { useAuth } from '@/context/AuthContext';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface CustomizationPanelProps {
   customization: CustomizationState;
@@ -22,9 +25,16 @@ export default function CustomizationPanel({
   setCustomization,
   setKnowledgeBase,
 }: CustomizationPanelProps) {
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+
+  const updateFirestore = async (data: any) => {
+    if (!user) return;
+    const userDocRef = doc(db, 'users', user.uid);
+    await setDoc(userDocRef, data, { merge: true });
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -32,59 +42,44 @@ export default function CustomizationPanel({
     }
   };
 
-  const readFileAsDataURI = (file: File): Promise<string> => {
+  const readFileAsText = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-  
-  const readFileAsText = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsText(file);
+      reader.readAsText(file);
     });
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      toast({ title: 'No file selected', description: 'Please choose a file to upload.', variant: 'destructive' });
+    if (!file || !user) {
+      toast({ title: 'No file selected or not logged in', description: 'Please choose a file and log in.', variant: 'destructive' });
       return;
     }
-    
+
     if (file.type !== 'text/plain') {
-        toast({ title: 'Invalid File Type', description: 'For this demo, please upload a .txt file.', variant: 'destructive' });
-        return;
+      toast({ title: 'Invalid File Type', description: 'For this demo, please upload a .txt file.', variant: 'destructive' });
+      return;
     }
 
     setIsUploading(true);
     try {
-      const [dataUri, textContent] = await Promise.all([
-        readFileAsDataURI(file),
-        readFileAsText(file),
-      ]);
-      
-      const result = await handleDocumentIngestion({ documentDataUri: dataUri });
+      const textContent = await readFileAsText(file);
+      await updateFirestore({ knowledgeBase: textContent });
+      setKnowledgeBase(textContent);
+      toast({ title: 'Upload Successful', description: 'Knowledge base has been updated.' });
 
-      if (result.success) {
-        setKnowledgeBase(textContent);
-        toast({ title: 'Upload Successful', description: 'Knowledge base has been updated.' });
-      } else {
-        toast({ title: 'Upload Failed', description: result.message, variant: 'destructive' });
-      }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to read or upload file.', variant: 'destructive' });
     } finally {
       setIsUploading(false);
     }
   };
-  
+
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomization(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const newCustomization = { ...customization, [e.target.name]: e.target.value };
+    setCustomization(newCustomization);
+    updateFirestore({ customization: newCustomization });
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +87,10 @@ export default function CustomizationPanel({
       const logoFile = e.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCustomization(prev => ({ ...prev, logoUrl: reader.result as string }));
+        const logoUrl = reader.result as string;
+        const newCustomization = { ...customization, logoUrl };
+        setCustomization(newCustomization);
+        updateFirestore({ customization: newCustomization });
       };
       reader.readAsDataURL(logoFile);
     }
@@ -126,17 +124,17 @@ export default function CustomizationPanel({
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <Label htmlFor="primaryColor">Primary Color</Label>
-                    <Input id="primaryColor" name="primaryColor" type="color" value={customization.primaryColor} onChange={handleColorChange} className="p-1"/>
+                  <Label htmlFor="primaryColor">Primary Color</Label>
+                  <Input id="primaryColor" name="primaryColor" type="color" value={customization.primaryColor} onChange={handleColorChange} className="p-1"/>
                 </div>
                 <div>
-                    <Label htmlFor="accentColor">Accent Color</Label>
-                    <Input id="accentColor" name="accentColor" type="color" value={customization.accentColor} onChange={handleColorChange} className="p-1"/>
+                  <Label htmlFor="accentColor">Accent Color</Label>
+                  <Input id="accentColor" name="accentColor" type="color" value={customization.accentColor} onChange={handleColorChange} className="p-1"/>
                 </div>
               </div>
-               <div>
-                  <Label htmlFor="backgroundColor">Background Color</Label>
-                  <Input id="backgroundColor" name="backgroundColor" type="color" value={customization.backgroundColor} onChange={handleColorChange} className="p-1"/>
+              <div>
+                <Label htmlFor="backgroundColor">Background Color</Label>
+                <Input id="backgroundColor" name="backgroundColor" type="color" value={customization.backgroundColor} onChange={handleColorChange} className="p-1"/>
               </div>
               <div>
                 <Label htmlFor="logo">Logo</Label>
