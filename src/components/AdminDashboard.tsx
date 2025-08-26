@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -43,9 +43,8 @@ export default function AdminDashboard() {
       router.push('/');
     } else if (user) {
       const userDocRef = doc(db, 'users', user.uid);
-      getDocs(collection(db, 'users')).then(snapshot => {
-         const userDoc = snapshot.docs.find(d => d.id === user.uid);
-         if (userDoc?.data().role !== 'admin') {
+      getDoc(userDocRef).then(userDoc => {
+         if (!userDoc.exists() || userDoc.data().role !== 'admin') {
              router.push('/dashboard');
          }
       });
