@@ -17,12 +17,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    // This will be properly initialized once firebase config is provided
+    try {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          setUser(user);
+          setLoading(false);
+        });
+        return () => unsubscribe();
+    } catch (error) {
+        console.error("Firebase auth error", error)
+        setLoading(false);
+    }
   }, []);
   
   const logout = async () => {

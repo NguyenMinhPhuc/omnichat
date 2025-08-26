@@ -52,8 +52,12 @@ export default function Dashboard() {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const data = userDoc.data();
-          setCustomization(data.customization || customization);
-          setKnowledgeBase(data.knowledgeBase || '');
+          if (data.customization) {
+            setCustomization(data.customization);
+          }
+          if (data.knowledgeBase) {
+            setKnowledgeBase(data.knowledgeBase);
+          }
         } else {
           // Create initial document if it doesn't exist
           await setDoc(userDocRef, { 
@@ -64,7 +68,7 @@ export default function Dashboard() {
       };
       fetchUserData();
     }
-  }, [user]);
+  }, [user, customization]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || !user) return;
