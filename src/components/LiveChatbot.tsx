@@ -25,6 +25,13 @@ interface CustomizationState {
   logoUrl: string | null;
 }
 
+const defaultCustomization: CustomizationState = {
+    primaryColor: '#29ABE2',
+    backgroundColor: '#F0F8FF',
+    accentColor: '#6495ED',
+    logoUrl: null,
+};
+
 interface LiveChatbotProps {
   chatbotId: string;
 }
@@ -47,6 +54,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     const fetchChatbotConfig = async () => {
       if (!chatbotId) {
         setError("Invalid chatbot ID.");
+        setCustomization(defaultCustomization);
         return;
       }
       try {
@@ -55,12 +63,15 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setCustomization(data.customization);
+          setCustomization(data.customization || defaultCustomization);
         } else {
-          setError("Chatbot configuration not found.");
+          // Fallback to default customization if config not found
+          console.warn(`Chatbot configuration not found for ID: ${chatbotId}. Using default.`);
+          setCustomization(defaultCustomization);
         }
       } catch (err) {
-        setError("Failed to load chatbot.");
+        setError("Failed to load chatbot configuration. Using default.");
+        setCustomization(defaultCustomization);
         console.error(err);
       }
     };
@@ -134,7 +145,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     handleSendMessage(inputValue);
   };
 
-  if (error) {
+  if (error && !customization) {
     return <div className="flex items-center justify-center h-screen bg-red-100 text-red-700">{error}</div>;
   }
   
