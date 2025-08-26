@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, LogOut, Settings, User } from 'lucide-react';
+import { Bot, LogOut, Settings, User, ShieldCheck } from 'lucide-react';
 import CustomizationPanel from './CustomizationPanel';
 import ChatbotPreview from './ChatbotPreview';
 import { getAIResponse } from '@/app/actions';
@@ -34,7 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
 
 export interface CustomizationState {
@@ -54,7 +54,9 @@ export default function Dashboard() {
     accentColor: '#6495ED',
     logoUrl: null,
   });
-
+  
+  const [displayName, setDisplayName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [knowledgeBase, setKnowledgeBase] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -63,7 +65,7 @@ export default function Dashboard() {
     },
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  const [userRole, setUserRole] = useState<'user' | null>(null);
+  const [userRole, setUserRole] = useState<'user' | 'admin' | null>(null);
 
 
   useEffect(() => {
@@ -87,6 +89,8 @@ export default function Dashboard() {
             return;
           }
           setUserRole(data.role);
+          setDisplayName(data.displayName || '');
+          setAvatarUrl(data.avatarUrl || null);
           if (data.knowledgeBase) {
             setKnowledgeBase(data.knowledgeBase);
           }
@@ -166,6 +170,7 @@ export default function Dashboard() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
+                      <AvatarImage src={avatarUrl || ''} alt={displayName} />
                       <AvatarFallback>
                         <User className="h-5 w-5" />
                       </AvatarFallback>
@@ -175,8 +180,9 @@ export default function Dashboard() {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.email}</p>
-                       <p className="text-xs leading-none text-muted-foreground capitalize">
+                      <p className="text-sm font-medium leading-none">{displayName || user.email}</p>
+                       <p className="text-xs leading-none text-muted-foreground capitalize flex items-center gap-1">
+                        {userRole === 'admin' ? <ShieldCheck className="w-3 h-3 text-primary" /> : null}
                         {userRole}
                       </p>
                     </div>

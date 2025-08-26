@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -25,10 +26,13 @@ export default function Signup() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Create user document in Firestore with default 'user' role
+      // Create user document in Firestore
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
+        displayName: user.email?.split('@')[0] || 'New User',
         role: 'user', // Default role
+        status: 'active', // Default status
+        avatarUrl: null,
         customization: {
           primaryColor: '#29ABE2',
           backgroundColor: '#F0F8FF',

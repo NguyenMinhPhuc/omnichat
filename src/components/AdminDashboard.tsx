@@ -33,12 +33,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from './ui/badge';
 
 interface UserData {
   id: string;
   email: string;
+  displayName: string;
+  avatarUrl: string | null;
   role: 'admin' | 'user';
+  status: 'active' | 'pending' | 'banned';
 }
 
 export default function AdminDashboard() {
@@ -83,6 +87,13 @@ export default function AdminDashboard() {
     toast({ title: 'Success', description: 'User role updated.' });
   };
   
+  const handleStatusChange = async (userId: string, status: 'active' | 'pending' | 'banned') => {
+    const userDoc = doc(db, 'users', userId);
+    await updateDoc(userDoc, { status });
+    setUsers(users.map(u => u.id === userId ? { ...u, status } : u));
+    toast({ title: 'Success', description: 'User status updated.' });
+  }
+
   const handleDeleteUser = async (userId: string) => {
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
         try {
@@ -146,6 +157,7 @@ export default function AdminDashboard() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
+                      <AvatarImage src={user.photoURL || ''} alt={user.displayName || user.email || ''} />
                       <AvatarFallback>
                         <User className="h-5 w-5" />
                       </AvatarFallback>
@@ -188,15 +200,27 @@ export default function AdminDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
+                    <TableHead>User</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((u) => (
                     <TableRow key={u.id}>
-                      <TableCell>{u.email}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                             <AvatarImage src={u.avatarUrl || ''} alt={u.displayName} />
+                            <AvatarFallback>{u.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{u.displayName}</div>
+                            <div className="text-sm text-muted-foreground">{u.email}</div>
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Select value={u.role} onValueChange={(value: 'admin' | 'user') => handleRoleChange(u.id, value)} disabled={u.id === user.uid}>
                           <SelectTrigger className="w-[120px]">
@@ -205,6 +229,18 @@ export default function AdminDashboard() {
                           <SelectContent>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="user">User</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Select value={u.status} onValueChange={(value: 'active' | 'pending' | 'banned') => handleStatusChange(u.id, value)} disabled={u.id === user.uid}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                             <SelectItem value="active"><Badge className="bg-green-500 hover:bg-green-600">Active</Badge></SelectItem>
+                             <SelectItem value="pending"><Badge variant="secondary">Pending</Badge></SelectItem>
+                             <SelectItem value="banned"><Badge variant="destructive">Banned</Badge></SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
