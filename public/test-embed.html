@@ -4,38 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OmniChat Embed Test</title>
-
     <style>
         body {
             font-family: sans-serif;
-            padding: 2rem;
-            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
         }
-        h1 {
-            color: #333;
+        header, footer {
+            width: 100%;
+            background-color: #fff;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        p {
-            color: #555;
+        main {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
+        .content {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+        }
+        .text-content {
+            max-width: 500px;
+        }
+        .chatbot-section {
+            border: 2px dashed #007bff;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+        h1 { color: #333; }
+        p { color: #555; line-height: 1.6; }
     </style>
 </head>
 <body>
 
-    <h1>Test Page for OmniChat Embed</h1>
-    <p>This is a sample page to test the embedded chatbot.</p>
-    <p>The chat bubble should appear in the bottom right corner.</p>
+    <header>
+        <h1>My Awesome Website</h1>
+    </header>
+
+    <main>
+        <div class="content">
+            <div class="text-content">
+                <h2>Welcome!</h2>
+                <p>This is a test page to demonstrate how to embed the OmniChat chatbot into a specific container on your site.</p>
+                <p>The chatbot should appear inside the dashed blue box on the right. You can control the size and position of this box using your own CSS.</p>
+            </div>
+            
+            <div class="chatbot-section">
+                <p style="margin-top: 0;">Chatbot Container:</p>
+                <!-- 
+                  STEP 1: Define a container element for your chatbot.
+                  You can style it however you like.
+                -->
+                <div id="my-chatbot" style="width: 350px; height: 500px; border-radius: 8px; overflow: hidden;">
+                    <!-- The chatbot iframe will be loaded here by the script -->
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>&copy; 2024 My Website. All rights reserved.</p>
+    </footer>
 
     <!-- 
-      IMPORTANT: Replace 'YOUR_CHATBOT_ID' with the actual ID from your dashboard.
+      STEP 2: Add the script tag before the closing </body> tag.
+      IMPORTANT: 
+      - Replace YOUR_CHATBOT_ID with your actual chatbot ID (user ID).
+      - Make sure `data-target-id` matches the `id` of your container div from Step 1.
     -->
-   
-
     <script 
-      src="/embed.js" 
-      data-chatbot-id="VIvRn9M01IOg3Kn0Yn5gQ0mUFjD3"
+      id="omnichat-embed-script"
+      src="./embed.js" 
+      data-chatbot-id="YOUR_CHATBOT_ID"
+      data-target-id="my-chatbot"
       defer>
     </script>
-  
-
 </body>
 </html>
