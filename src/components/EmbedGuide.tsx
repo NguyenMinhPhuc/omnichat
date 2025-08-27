@@ -23,7 +23,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
   const [logoUrl, setLogoUrl] = useState('');
 
   useEffect(() => {
-     if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
       setOrigin(window.location.origin);
     }
 
@@ -42,7 +42,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
 
   useEffect(() => {
     if (origin && chatbotId) {
-      // Note: Use a unique ID for the script to make it easier to find in the DOM.
+      // Use a unique ID for the script to make it easier to find in the DOM.
       const scriptTag = `<script 
   id="omnichat-embed-script"
   src="${origin}/embed.js" 
