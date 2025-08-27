@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload, Palette, FileText, History } from 'lucide-react';
+import { Upload, Palette, FileText, History, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
+import { handleDocumentIngestion } from '@/app/actions';
 
 interface CustomizationPanelProps {
   customization: CustomizationState;
@@ -20,6 +21,8 @@ interface CustomizationPanelProps {
   setKnowledgeBase: (kb: string) => void;
   chatbotId: string;
 }
+
+type IngestionSource = 'file' | 'url';
 
 export default function CustomizationPanel({
   customization,
@@ -29,8 +32,10 @@ export default function CustomizationPanel({
 }: CustomizationPanelProps) {
   const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  const [ingestionSource, setIngestionSource] = useState<IngestionSource>('file');
 
   const updateFirestore = async (data: any) => {
     if (!user) return;
@@ -43,38 +48,49 @@ export default function CustomizationPanel({
       setFile(e.target.files[0]);
     }
   };
-
-  const readFileAsText = (file: File): Promise<string> => {
+  
+  const readFileAsDataURL = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = reject;
-      reader.readAsText(file);
+      reader.readAsDataURL(file);
     });
   };
 
-  const handleUpload = async () => {
-    if (!file || !user) {
-      toast({ title: 'No file selected or not logged in', description: 'Please choose a file and log in.', variant: 'destructive' });
-      return;
+  const handleSubmit = async () => {
+    if (!user) {
+        toast({ title: 'Not logged in', description: 'Please log in to update the knowledge base.', variant: 'destructive' });
+        return;
     }
-
-    if (file.type !== 'text/plain') {
-      toast({ title: 'Invalid File Type', description: 'For this demo, please upload a .txt file.', variant: 'destructive' });
-      return;
-    }
-
+    
     setIsUploading(true);
     try {
-      const textContent = await readFileAsText(file);
-      await updateFirestore({ knowledgeBase: textContent });
-      setKnowledgeBase(textContent);
-      toast({ title: 'Upload Successful', description: 'Knowledge base has been updated.' });
+        let result;
+        if (ingestionSource === 'file' && file) {
+            const dataUri = await readFileAsDataURL(file);
+            result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
+        } else if (ingestionSource === 'url' && url) {
+            result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'url', content: url }});
+        } else {
+            toast({ title: 'No source selected', description: 'Please select a file or enter a URL.', variant: 'destructive' });
+            setIsUploading(false);
+            return;
+        }
 
+        if (result.success) {
+            toast({ title: 'Ingestion Successful', description: result.message });
+            if (result.knowledgeBase) {
+                setKnowledgeBase(result.knowledgeBase);
+            }
+        } else {
+            toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
+        }
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to read or upload file.', variant: 'destructive' });
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     } finally {
-      setIsUploading(false);
+        setIsUploading(false);
     }
   };
 
@@ -98,6 +114,7 @@ export default function CustomizationPanel({
     }
   };
 
+  const isSubmitDisabled = isUploading || (ingestionSource === 'file' && !file) || (ingestionSource === 'url' && !url);
 
   return (
     <Card>
@@ -113,15 +130,37 @@ export default function CustomizationPanel({
             <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> Chat History</TabsTrigger>
           </TabsList>
           <TabsContent value="content" className="pt-4">
-            <div className="space-y-4">
-              <Label htmlFor="knowledge-base-file">Knowledge Base (txt)</Label>
-              <p className="text-sm text-muted-foreground">Upload a text file to provide context for the chatbot.</p>
-              <Input id="knowledge-base-file" type="file" onChange={handleFileChange} accept=".txt" />
-              <Button onClick={handleUpload} disabled={isUploading || !file} className="w-full">
-                <Upload className="mr-2 h-4 w-4" />
-                {isUploading ? 'Uploading...' : 'Upload & Ingest'}
-              </Button>
-            </div>
+            <Tabs defaultValue={ingestionSource} onValueChange={(value) => setIngestionSource(value as IngestionSource)} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="file"><Upload className="mr-2 h-4 w-4" />Upload File</TabsTrigger>
+                    <TabsTrigger value="url"><LinkIcon className="mr-2 h-4 w-4" />From Website</TabsTrigger>
+                </TabsList>
+                <TabsContent value="file" className="pt-4 space-y-4">
+                    <Label htmlFor="knowledge-base-file">Knowledge File</Label>
+                    <p className="text-sm text-muted-foreground">Upload a file (.txt, .pdf, .docx, .png, .jpg) to provide context.</p>
+                    <Input 
+                        id="knowledge-base-file" 
+                        type="file" 
+                        onChange={handleFileChange} 
+                        accept=".txt,.pdf,.doc,.docx,image/png,image/jpeg"
+                    />
+                </TabsContent>
+                <TabsContent value="url" className="pt-4 space-y-4">
+                    <Label htmlFor="knowledge-base-url">Website URL</Label>
+                    <p className="text-sm text-muted-foreground">Enter a URL to scrape the website content for context.</p>
+                    <Input 
+                        id="knowledge-base-url" 
+                        type="url" 
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="https://example.com"
+                    />
+                </TabsContent>
+            </Tabs>
+            <Button onClick={handleSubmit} disabled={isSubmitDisabled} className="w-full mt-4">
+              {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              {isUploading ? 'Ingesting...' : 'Upload & Ingest'}
+            </Button>
           </TabsContent>
           <TabsContent value="appearance" className="pt-4">
             <div className="space-y-4">
