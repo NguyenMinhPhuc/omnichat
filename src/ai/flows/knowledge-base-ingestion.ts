@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This flow handles the ingestion and processing of various document types
@@ -33,7 +34,7 @@ export type KnowledgeBaseIngestionInput = z.infer<typeof KnowledgeBaseIngestionI
 export const KnowledgeBaseIngestionOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
-  knowledgeBase?: z.string().optional(),
+  knowledgeBase: z.string().optional(),
 });
 export type KnowledgeBaseIngestionOutput = z.infer<typeof KnowledgeBaseIngestionOutputSchema>;
 
