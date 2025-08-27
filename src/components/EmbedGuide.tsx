@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Code, Copy } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -18,30 +17,29 @@ interface EmbedGuideProps {
 export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
   const { toast } = useToast();
   const [embedCode, setEmbedCode] = useState('');
-  const [origin, setOrigin] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setOrigin(window.location.origin);
+    if (typeof window === 'undefined' || !chatbotId) {
+      return;
     }
 
-    const fetchCustomization = async () => {
-      if (!chatbotId) return;
-      const userDocRef = doc(db, 'users', chatbotId);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setPrimaryColor(data.customization?.primaryColor || '#1F5AA8');
-        setLogoUrl(data.customization?.logoUrl || '');
-      }
-    };
-    fetchCustomization();
-  }, [chatbotId]);
+    const generateEmbedCode = async () => {
+      const origin = window.location.origin;
+      let primaryColor = '#1F5AA8'; // Default color
+      let logoUrl = ''; // Default logo
 
-  useEffect(() => {
-    if (origin && chatbotId) {
+      try {
+        const userDocRef = doc(db, 'users', chatbotId);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          primaryColor = data.customization?.primaryColor || primaryColor;
+          logoUrl = data.customization?.logoUrl || logoUrl;
+        }
+      } catch (error) {
+        console.error("Failed to fetch chatbot customization:", error);
+      }
+
       // Use a unique ID for the script to make it easier to find in the DOM.
       const scriptTag = `<script 
   id="omnichat-embed-script"
@@ -51,9 +49,13 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
   data-logo-url="${logoUrl}"
   defer>
 </script>`;
+
       setEmbedCode(scriptTag);
-    }
-  }, [origin, chatbotId, primaryColor, logoUrl]);
+    };
+
+    generateEmbedCode();
+
+  }, [chatbotId]);
 
 
   const copyToClipboard = () => {
@@ -66,7 +68,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
     <Card>
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2"><Code /> Embed on Your Site</CardTitle>
-        <CardDescription>Copy and paste this code just before the closing `</body>` tag on your website.</CardDescription>
+        <CardDescription>Copy and paste this code just before the closing `&lt;/body&gt;` tag on your website.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
@@ -74,7 +76,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
           <div className="relative">
             <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto">
               <code>
-                {embedCode ? embedCode.replace(/ /g, '\u00a0').replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'Loading...'}
+                {embedCode || 'Loading...'}
               </code>
             </pre>
             <Button
