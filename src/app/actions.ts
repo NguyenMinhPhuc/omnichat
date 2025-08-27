@@ -5,12 +5,8 @@ import { intelligentAIResponse } from '@/ai/flows/intelligent-ai-responses'
 import { knowledgeBaseIngestion } from '@/ai/flows/knowledge-base-ingestion';
 import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput } from '@/ai/schemas';
 
-export {
-    KnowledgeBaseIngestionInputSchema,
-    KnowledgeBaseIngestionOutputSchema,
-    IntelligentAIResponseInputSchema,
-    IntelligentAIResponseOutputSchema,
-} from '@/ai/schemas';
+// Re-exporting schemas is not allowed in 'use server' files.
+// Client components will import types directly from the schema file if needed.
 export type {
     KnowledgeBaseIngestionInput,
     KnowledgeBaseIngestionOutput,
