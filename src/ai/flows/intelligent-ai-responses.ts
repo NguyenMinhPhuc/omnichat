@@ -16,6 +16,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { Document, retrieve } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
+import { IntelligentAIResponseInput, IntelligentAIResponseOutput, IntelligentAIResponseInputSchema, IntelligentAIResponseOutputSchema } from '@/app/actions';
+
 
 // Ensure Firebase Admin is initialized
 if (!getApps().length) {
@@ -26,16 +28,6 @@ const db = getFirestore();
 // Define the embedding model
 const embedder = googleAI.embedder('text-embedding-004');
 
-const IntelligentAIResponseInputSchema = z.object({
-  query: z.string().describe('The user query.'),
-  userId: z.string().describe('The ID of the user to fetch the knowledge base for.'),
-});
-export type IntelligentAIResponseInput = z.infer<typeof IntelligentAIResponseInputSchema>;
-
-const IntelligentAIResponseOutputSchema = z.object({
-  response: z.string().describe('The chatbot response to the user query.'),
-});
-export type IntelligentAIResponseOutput = z.infer<typeof IntelligentAIResponseOutputSchema>;
 
 export async function intelligentAIResponse(input: IntelligentAIResponseInput): Promise<IntelligentAIResponseOutput> {
   return intelligentAIResponseFlow(input);

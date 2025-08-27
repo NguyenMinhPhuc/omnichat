@@ -18,6 +18,7 @@ import { initializeApp, getApps } from 'firebase-admin/app';
 import { Document, index } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionOutput, KnowledgeBaseIngestionInputSchema, KnowledgeBaseIngestionOutputSchema } from '@/app/actions';
 
 
 // Ensure Firebase Admin is initialized
@@ -28,23 +29,6 @@ const db = getFirestore();
 
 // Define the embedding model
 const embedder = googleAI.embedder('text-embedding-004');
-
-
-export const KnowledgeBaseIngestionInputSchema = z.object({
-  source: z.union([
-      z.object({ type: z.literal('dataUri'), content: z.string().describe("A file represented as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'.") }),
-      z.object({ type: z.literal('url'), content: z.string().url().describe('A valid URL to a website to scrape.') }),
-  ]),
-  userId: z.string().describe('The ID of the user for whom to ingest the knowledge base.'),
-});
-export type KnowledgeBaseIngestionInput = z.infer<typeof KnowledgeBaseIngestionInputSchema>;
-
-export const KnowledgeBaseIngestionOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  knowledgeBase: z.string().optional(), // This is kept for compatibility but will not be populated with large text anymore
-});
-export type KnowledgeBaseIngestionOutput = z.infer<typeof KnowledgeBaseIngestionOutputSchema>;
 
 const extractionPrompt = ai.definePrompt({
     name: 'knowledgeExtractionPrompt',
