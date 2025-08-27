@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -146,11 +147,11 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   };
 
   if (error && !customization) {
-    return <div className="flex items-center justify-center h-screen bg-red-100 text-red-700">{error}</div>;
+    return <div className="flex items-center justify-center h-full w-full bg-red-100 text-red-700">{error}</div>;
   }
   
   if (!customization) {
-    return <div className="flex items-center justify-center h-screen">Loading chatbot...</div>;
+    return <div className="flex items-center justify-center h-full w-full">Loading chatbot...</div>;
   }
   
   const customStyles = {
@@ -160,7 +161,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   } as React.CSSProperties;
 
   return (
-    <div className="h-screen w-screen bg-transparent flex items-center justify-center">
+    <div className="h-full w-full bg-transparent">
         <Card className="h-full w-full flex flex-col shadow-lg" style={customStyles}>
           <CardHeader className="flex flex-row items-center justify-between p-4 border-b bg-[--chat-primary-color] text-primary-foreground rounded-t-lg">
             <div className="flex items-center space-x-3">
@@ -239,3 +240,5 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     </div>
   );
 }
+
+    
