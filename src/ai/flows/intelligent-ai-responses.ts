@@ -16,7 +16,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { Document, retrieve } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { IntelligentAIResponseInput, IntelligentAIResponseOutput, IntelligentAIResponseInputSchema, IntelligentAIResponseOutputSchema } from '@/app/actions';
+import { IntelligentAIResponseInput, IntelligentAIResponseOutput, IntelligentAIResponseInputSchema, IntelligentAIResponseOutputSchema } from '@/ai/schemas';
 
 
 // Ensure Firebase Admin is initialized

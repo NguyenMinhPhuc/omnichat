@@ -18,7 +18,7 @@ import { initializeApp, getApps } from 'firebase-admin/app';
 import { Document, index } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
-import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionOutput, KnowledgeBaseIngestionInputSchema, KnowledgeBaseIngestionOutputSchema } from '@/app/actions';
+import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionOutput, KnowledgeBaseIngestionInputSchema, KnowledgeBaseIngestionOutputSchema } from '@/ai/schemas';
 
 
 // Ensure Firebase Admin is initialized
