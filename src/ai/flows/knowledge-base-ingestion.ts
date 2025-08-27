@@ -53,15 +53,9 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
     },
     async ({ source, userId }) => {
         try {
-            // 1. Determine the source to process and construct the appropriate prompt input
-            let sourceToProcess = '';
-            if (source.type === 'dataUri') {
-                sourceToProcess = `{{media url=${source.content}}}`;
-            } else if (source.type === 'url') {
-                sourceToProcess = `Please extract the text content from the website at this URL: ${source.content}`;
-            } else {
-                 return { success: false, message: "Invalid source type provided." };
-            }
+            // 1. Construct the appropriate prompt input for Genkit to process the source.
+            // Genkit can handle both data URIs and website URLs with the same media helper.
+            const sourceToProcess = `{{media url="${source.content}"}}`;
 
             // 2. Extract text from the source
             const result = await extractionPrompt({ sourceToProcess });
