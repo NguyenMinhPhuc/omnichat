@@ -14,7 +14,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
-import { Document, retrieve } from 'genkit/experimental/ai';
+import { Document, retrieve } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
 // Ensure Firebase Admin is initialized

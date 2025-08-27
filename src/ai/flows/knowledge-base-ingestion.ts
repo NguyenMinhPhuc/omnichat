@@ -15,7 +15,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
-import { Document, index } from 'genkit/experimental/ai';
+import { Document, index } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 
