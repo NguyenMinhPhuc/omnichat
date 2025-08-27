@@ -8,7 +8,15 @@
         body {
             font-family: sans-serif;
             padding: 2rem;
-            background-color: #f0f2f5;
+            background-color: #f0f4f8;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         h1 {
             color: #333;
@@ -16,29 +24,24 @@
         p {
             line-height: 1.6;
             color: #555;
-            max-width: 800px;
         }
     </style>
 </head>
 <body>
-
-    <h1>Welcome to Our Test Page</h1>
-    <p>This is a sample page to demonstrate the embedded chatbot functionality. You should see a chat bubble appear at the bottom right of the screen.</p>
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue.</p>
-    <p>Clicking on the chat bubble should open the chat window. Clicking the close button on the chat window should hide it.</p>
+    <div class="container">
+        <h1>Chatbot Embed Test Page</h1>
+        <p>This is a sample page to test the embedded chatbot functionality.</p>
+        <p>If the script is working correctly, the chatbot bubble should appear in the bottom right corner of this page. Clicking on it should open the chat window.</p>
+    </div>
 
     <!-- 
-      OMNICHAT EMBED SCRIPT 
-      ======================
-      1. Copy the script tag from your OmniChat dashboard.
-      2. It will look like the example below.
-      3. IMPORTANT: Replace 'YOUR_CHATBOT_ID' with the actual ID from your dashboard.
+      IMPORTANT: Replace 'YOUR_CHATBOT_ID' with the actual chatbot ID 
+      from your OmniChat dashboard for the script to work.
     -->
     <script 
-      src="/embed.js" 
-      data-chatbot-id="YOUR_CHATBOT_ID"
-      defer>
+        src="/embed.js" 
+        data-chatbot-id="YOUR_CHATBOT_ID"
+        defer>
     </script>
-
 </body>
 </html>
