@@ -33,7 +33,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const data = userDoc.data();
-        setPrimaryColor(data.customization?.primaryColor || '#29ABE2');
+        setPrimaryColor(data.customization?.primaryColor || '#1F5AA8');
         setLogoUrl(data.customization?.logoUrl || '');
       }
     };
@@ -42,7 +42,9 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
 
   useEffect(() => {
     if (origin && chatbotId) {
+      // Note: Use a unique ID for the script to make it easier to find in the DOM.
       const scriptTag = `<script 
+  id="omnichat-embed-script"
   src="${origin}/embed.js" 
   data-chatbot-id="${chatbotId}"
   data-primary-color="${primaryColor}"
@@ -64,7 +66,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
     <Card>
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2"><Code /> Embed on Your Site</CardTitle>
-        <CardDescription>Copy and paste this code just before the closing `&lt;/body&gt;` tag on your website.</CardDescription>
+        <CardDescription>Copy and paste this code just before the closing `</body>` tag on your website.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
