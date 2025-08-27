@@ -168,7 +168,8 @@ export default function Dashboard() {
             </div>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Button variant="ghost" className="flex items-center gap-2 relative h-10 rounded-full">
+                     <span className="text-sm font-medium">{displayName || user.email}</span>
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={avatarUrl || ''} alt={displayName} />
                       <AvatarFallback>

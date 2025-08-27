@@ -63,6 +63,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserData[]>([]);
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
+  const [displayName, setDisplayName] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -73,7 +74,9 @@ export default function AdminDashboard() {
          if (!userDoc.exists() || userDoc.data().role !== 'admin') {
              router.push('/dashboard');
          } else {
-            setUserRole(userDoc.data().role);
+            const userData = userDoc.data();
+            setUserRole(userData.role);
+            setDisplayName(userData.displayName || '');
             fetchUsers();
          }
       });
@@ -177,7 +180,8 @@ export default function AdminDashboard() {
             </div>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Button variant="ghost" className="flex items-center gap-2 relative h-10 rounded-full">
+                    <span className="text-sm font-medium">{displayName || user.email}</span>
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={user.photoURL || ''} alt={user.displayName || user.email || ''} />
                       <AvatarFallback>
@@ -323,5 +327,3 @@ export default function AdminDashboard() {
     </SidebarProvider>
   );
 }
-
-    
