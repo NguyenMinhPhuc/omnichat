@@ -36,6 +36,7 @@ const extractionPrompt = ai.definePrompt({
     input: { schema: z.object({
         sourceToProcess: z.string(),
     })},
+    output: { schema: z.object({ text: z.string() }) },
     prompt: `You are an expert at extracting raw text content from various sources.
     Analyze the provided document or website and extract all the meaningful text from it.
     Do not summarize. Do not add any commentary. Return only the extracted text.
@@ -53,18 +54,16 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
     },
     async ({ source, userId }) => {
         try {
-            // 1. Construct the appropriate prompt input for Genkit to process the source.
-            // Genkit can handle both data URIs and website URLs with the same media helper.
+            // 1. Let Genkit process the source URL or data URI.
             const sourceToProcess = `{{media url="${source.content}"}}`;
 
-            // 2. Extract text from the source
-            const result = await extractionPrompt({ sourceToProcess });
-            const extractedContent = result.text;
+            // 2. Extract text from the source using the correct prompt invocation.
+            const { output } = await extractionPrompt({ sourceToProcess });
 
-
-            if (!extractedContent) {
+            if (!output || !output.text) {
                 return { success: false, message: "Could not extract any text from the source." };
             }
+            const extractedContent = output.text;
 
             // 3. Split the extracted text into chunks
             const splitter = new RecursiveCharacterTextSplitter({
