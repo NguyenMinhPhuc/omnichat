@@ -106,6 +106,15 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
         } catch (error) {
             console.error("Error during knowledge base ingestion flow:", error);
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during ingestion.";
+            
+            // Check for quota-related errors
+            if (/(quota|rate limit|resource has been exhausted)/i.test(errorMessage)) {
+                return {
+                    success: false,
+                    message: "API quota exceeded. You've made too many requests in a short period. Please try again later or use a smaller document."
+                };
+            }
+
             return { success: false, message: errorMessage };
         }
     }
