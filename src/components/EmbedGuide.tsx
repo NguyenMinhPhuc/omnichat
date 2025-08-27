@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Code, Copy } from 'lucide-react';
+import { Code, Copy, Info } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 
 interface EmbedGuideProps {
   chatbotId: string;
@@ -51,7 +53,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
     <Card>
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2"><Code /> Embed on Your Site</CardTitle>
-        <CardDescription>Follow these two steps to add the chatbot to your website.</CardDescription>
+        <CardDescription>Follow these steps to add the chatbot to your website.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
@@ -98,6 +100,20 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
             </Button>
           </div>
         </div>
+
+        <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Important: Testing Locally</AlertTitle>
+            <AlertDescription>
+                <p className="mb-2">
+                    Due to browser security policies, opening your HTML file directly from your computer (e.g., `file:///...`) will not work. You must serve the file from a local web server.
+                </p>
+                <p>
+                    An easy way is to use `npx serve`. In your terminal, navigate to the folder with your HTML file and run <code className="bg-muted px-1 py-0.5 rounded-sm font-semibold">npx serve</code>. Then open the `localhost` URL it provides.
+                </p>
+            </AlertDescription>
+        </Alert>
+
       </CardContent>
     </Card>
   );
