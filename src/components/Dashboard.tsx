@@ -49,9 +49,9 @@ export default function Dashboard() {
   const router = useRouter();
 
   const [customization, setCustomization] = useState<CustomizationState>({
-    primaryColor: '#29ABE2',
-    backgroundColor: '#F0F8FF',
-    accentColor: '#6495ED',
+    primaryColor: '#1F5AA8',
+    backgroundColor: '#FFFFFF',
+    accentColor: '#FAB91E',
     logoUrl: null,
   });
   
@@ -91,8 +91,9 @@ export default function Dashboard() {
           setUserRole(data.role);
           setDisplayName(data.displayName || '');
           setAvatarUrl(data.avatarUrl || null);
-          if (data.knowledgeBase) {
-            setKnowledgeBase(data.knowledgeBase);
+          // We check for the last update timestamp now instead of the content
+          if (data.knowledgeBaseLastUpdatedAt) {
+            setKnowledgeBase('ready'); // Indicate that KB exists
           }
         }
       };

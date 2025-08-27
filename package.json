@@ -43,6 +43,7 @@
     "firebase": "^10.12.2",
     "firebase-admin": "^12.1.1",
     "genkit": "^1.14.1",
+    "langchain": "^0.2.1",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "patch-package": "^8.0.0",
