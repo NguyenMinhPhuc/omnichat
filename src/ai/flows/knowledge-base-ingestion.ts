@@ -12,7 +12,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { Document, index } from 'genkit';
@@ -34,23 +34,14 @@ const extractionPrompt = ai.definePrompt({
     name: 'knowledgeExtractionPrompt',
     model: 'googleai/gemini-1.5-flash-latest',
     input: { schema: z.object({
-        source: z.union([
-            z.object({ type: z.literal('dataUri'), content: z.string() }),
-            z.object({ type: z.literal('url'), content: z.string().url() }),
-        ]),
+        sourceToProcess: z.string(),
     })},
     prompt: `You are an expert at extracting raw text content from various sources.
     Analyze the provided document or website and extract all the meaningful text from it.
     Do not summarize. Do not add any commentary. Return only the extracted text.
 
     Source:
-    {{#if source.content}}
-        {{#if (eq source.type "dataUri")}}
-            {{media url=source.content}}
-        {{else}}
-            Please extract the text content from the website at this URL: {{{source.content}}}
-        {{/if}}
-    {{/if}}
+    {{{sourceToProcess}}}
     `,
 });
 
@@ -62,30 +53,40 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
     },
     async ({ source, userId }) => {
         try {
-            // 1. Extract text from the source
-            const { text: extractedContent } = await extractionPrompt({ source });
+            // 1. Determine the source to process and construct the appropriate prompt input
+            let sourceToProcess = '';
+            if (source.type === 'dataUri') {
+                sourceToProcess = `{{media url=${source.content}}}`;
+            } else if (source.type === 'url') {
+                sourceToProcess = `Please extract the text content from the website at this URL: ${source.content}`;
+            } else {
+                 return { success: false, message: "Invalid source type provided." };
+            }
+
+            // 2. Extract text from the source
+            const { text: extractedContent } = await extractionPrompt({ sourceToProcess });
 
             if (!extractedContent) {
                 return { success: false, message: "Could not extract any text from the source." };
             }
 
-            // 2. Split the extracted text into chunks
+            // 3. Split the extracted text into chunks
             const splitter = new RecursiveCharacterTextSplitter({
                 chunkSize: 1000,
                 chunkOverlap: 100,
             });
             const chunks = await splitter.splitText(extractedContent);
 
-            // 3. Create Document objects for Genkit
+            // 4. Create Document objects for Genkit
             const documents = chunks.map(chunk => Document.fromText(chunk));
 
-            // 4. Index the documents (creates embeddings)
+            // 5. Index the documents (creates embeddings)
             const indexedDocs = await index({
                 documents,
                 embedder,
             });
 
-            // 5. Store the indexed documents (vectors) in Firestore
+            // 6. Store the indexed documents (vectors) in Firestore
             const vectorStoreCollection = db.collection('users').doc(userId).collection('vector_store');
             const batch = db.batch();
 
