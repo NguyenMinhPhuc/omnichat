@@ -68,19 +68,26 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
     },
     async ({ source, userId }) => {
         try {
-            const { text } = await extractionPrompt({ source });
+            const { text: newContent } = await extractionPrompt({ source });
 
-            if (!text) {
+            if (!newContent) {
                 return { success: false, message: "Could not extract any text from the source." };
             }
             
             const userDocRef = db.collection('users').doc(userId);
-            await userDocRef.set({ knowledgeBase: text }, { merge: true });
+            const userDoc = await userDocRef.get();
+
+            const existingKnowledgeBase = userDoc.exists() ? userDoc.data()?.knowledgeBase || '' : '';
+            
+            // Append new content to the existing knowledge base, separated by a space.
+            const updatedKnowledgeBase = (existingKnowledgeBase + ' ' + newContent).trim();
+
+            await userDocRef.set({ knowledgeBase: updatedKnowledgeBase }, { merge: true });
 
             return {
                 success: true,
                 message: 'Knowledge base updated successfully from the source.',
-                knowledgeBase: text,
+                knowledgeBase: updatedKnowledgeBase,
             };
         } catch (error) {
             console.error("Error during knowledge base ingestion flow:", error);
