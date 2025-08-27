@@ -64,7 +64,9 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
             }
 
             // 2. Extract text from the source
-            const { text: extractedContent } = await extractionPrompt({ sourceToProcess });
+            const result = await extractionPrompt.generate({ input: { sourceToProcess } });
+            const extractedContent = result.text();
+
 
             if (!extractedContent) {
                 return { success: false, message: "Could not extract any text from the source." };
