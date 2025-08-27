@@ -4,14 +4,15 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, LogOut, ShieldCheck, Trash2, User, Users } from 'lucide-react';
+import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -35,6 +36,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from './ui/badge';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface UserData {
   id: string;
@@ -95,18 +107,28 @@ export default function AdminDashboard() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-        try {
-            await deleteDoc(doc(db, "users", userId));
-            // Note: Deleting from Firebase Auth requires a server-side environment (e.g., Cloud Functions)
-            // This implementation only deletes the user from Firestore.
-            fetchUsers();
-            toast({ title: 'User Deleted', description: 'User has been removed from Firestore.' });
-        } catch (error: any) {
-            toast({ title: 'Error', description: error.message, variant: 'destructive' });
-        }
+    try {
+        await deleteDoc(doc(db, "users", userId));
+        // Note: Deleting from Firebase Auth requires a server-side environment (e.g., Cloud Functions)
+        // This implementation only deletes the user from Firestore.
+        fetchUsers();
+        toast({ title: 'User Deleted', description: 'User has been removed from Firestore.' });
+    } catch (error: any) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
+
+  const handlePasswordReset = async (email: string) => {
+    try {
+        await sendPasswordResetEmail(auth, email);
+        toast({
+            title: 'Password Reset Email Sent',
+            description: `An email has been sent to ${email} with instructions to reset their password.`
+        });
+    } catch (error: any) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive'});
+    }
+  }
 
   if (loading || !user || !userRole) {
     return <div>Loading...</div>;
@@ -245,10 +267,50 @@ export default function AdminDashboard() {
                         </Select>
                       </TableCell>
                       <TableCell className="text-right">
-                          <Button variant="destructive" size="icon" onClick={() => handleDeleteUser(u.id)} disabled={u.id === user.uid}>
-                              <Trash2 className="h-4 w-4" />
-                               <span className="sr-only">Delete User</span>
-                          </Button>
+                        <div className="flex items-center justify-end gap-2">
+                           <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="icon" disabled={u.id === user.uid}>
+                                      <KeyRound className="h-4 w-4" />
+                                      <span className="sr-only">Reset Password</span>
+                                  </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                          This will send a password reset link to {u.email}. The user will be able to set a new password.
+                                      </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handlePasswordReset(u.email)}>
+                                          Send Email
+                                      </AlertDialogAction>
+                                  </AlertDialogFooter>
+                              </AlertDialogContent>
+                          </AlertDialog>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="icon" disabled={u.id === user.uid}>
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete User</span>
+                                </Button>
+                            </AlertDialogTrigger>
+                             <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the user's data from Firestore, but not from Firebase Authentication.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteUser(u.id)}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -261,3 +323,5 @@ export default function AdminDashboard() {
     </SidebarProvider>
   );
 }
+
+    
