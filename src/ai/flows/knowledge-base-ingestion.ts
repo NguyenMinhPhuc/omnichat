@@ -83,24 +83,29 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
             // 2. Extract text from the source using the correct prompt invocation.
             const { output } = await extractionPrompt({ sourceToProcess });
 
-            if (!output || !output.text) {
-                return { success: false, message: "Could not extract any text from the source." };
+            // 3. Validate extracted content
+            if (!output || !output.text || !output.text.trim()) {
+                return { success: false, message: "Could not extract any text from the source. The file might be empty, too large, or in an unsupported format." };
             }
             const extractedContent = output.text;
 
-            // 3. Split the extracted text into chunks
+            // 4. Split the extracted text into chunks
             const chunks = await splitTextIntoChunks(extractedContent, 1000, 100);
+            
+            if (chunks.length === 0) {
+                 return { success: false, message: "Failed to split the document into processable chunks. The content might be empty." };
+            }
 
-            // 4. Create Document objects for Genkit
+            // 5. Create Document objects for Genkit
             const documents = chunks.map(chunk => Document.fromText(chunk));
 
-            // 5. Index the documents (creates embeddings)
+            // 6. Index the documents (creates embeddings)
             const indexedDocs = await index({
                 documents,
                 embedder,
             });
 
-            // 6. Store the indexed documents (vectors) in Firestore
+            // 7. Store the indexed documents (vectors) in Firestore
             const vectorStoreCollection = db.collection('users').doc(userId).collection('vector_store');
             const batch = db.batch();
 
