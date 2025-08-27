@@ -44,10 +44,12 @@ const extractionPrompt = ai.definePrompt({
     Do not summarize. Do not add any commentary. Return only the extracted text.
 
     Source:
-    {{#if (eq source.type "dataUri")}}
-        {{media url=source.content}}
-    {{else}}
-        Please extract the text content from the website at this URL: {{{source.content}}}
+    {{#if source.content}}
+        {{#if (eq source.type "dataUri")}}
+            {{media url=source.content}}
+        {{else}}
+            Please extract the text content from the website at this URL: {{{source.content}}}
+        {{/if}}
     {{/if}}
     `,
 });
