@@ -2,6 +2,14 @@ import type {Config} from 'next';
 
 const nextConfig: Config = {
   reactStrictMode: true,
+  // Add the experimental block here
+  experimental: {
+    // This allows the Next.js dev server to accept requests from the
+    // Firebase Studio preview URL.
+    allowedDevOrigins: [
+      'https://*.cluster-6dx7corvpngoivimwvvljgokdw.cloudworkstations.dev',
+    ],
+  },
   async headers() {
     return [
       {
