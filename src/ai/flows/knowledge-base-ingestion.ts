@@ -17,7 +17,6 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { Document, index } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionOutput, KnowledgeBaseIngestionInputSchema, KnowledgeBaseIngestionOutputSchema } from '@/ai/schemas';
 
 
@@ -29,6 +28,30 @@ const db = getFirestore();
 
 // Define the embedding model
 const embedder = googleAI.embedder('text-embedding-004');
+
+/**
+ * Splits a long text into smaller chunks based on a specified chunk size and overlap.
+ * This is a simplified, self-contained alternative to RecursiveCharacterTextSplitter.
+ * @param text The full text to be split.
+ * @param chunkSize The maximum size of each chunk.
+ * @param chunkOverlap The number of characters to overlap between chunks.
+ * @returns A promise that resolves to an array of text chunks.
+ */
+async function splitTextIntoChunks(text: string, chunkSize: number, chunkOverlap: number): Promise<string[]> {
+    if (chunkOverlap >= chunkSize) {
+        throw new Error("chunkOverlap must be smaller than chunkSize.");
+    }
+
+    const chunks: string[] = [];
+    let i = 0;
+    while (i < text.length) {
+        const end = Math.min(i + chunkSize, text.length);
+        chunks.push(text.substring(i, end));
+        i += (chunkSize - chunkOverlap);
+    }
+    return chunks;
+}
+
 
 const extractionPrompt = ai.definePrompt({
     name: 'knowledgeExtractionPrompt',
@@ -66,11 +89,7 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
             const extractedContent = output.text;
 
             // 3. Split the extracted text into chunks
-            const splitter = new RecursiveCharacterTextSplitter({
-                chunkSize: 1000,
-                chunkOverlap: 100,
-            });
-            const chunks = await splitter.splitText(extractedContent);
+            const chunks = await splitTextIntoChunks(extractedContent, 1000, 100);
 
             // 4. Create Document objects for Genkit
             const documents = chunks.map(chunk => Document.fromText(chunk));
