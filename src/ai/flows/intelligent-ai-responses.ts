@@ -67,7 +67,7 @@ export const intelligentAIResponseFlow = ai.defineFlow(
     }
     
     // If no context, the array will be empty, and the prompt handles it gracefully.
-    const { output } = await ragPrompt({ query, context });
-    return output!;
+    const { response } = await ragPrompt({ query, context });
+    return { response };
   }
 );
