@@ -1,11 +1,11 @@
 
 'use server'
 
-import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput, KnowledgeBaseIngestionOutput, IntelligentAIResponseOutput } from '@/ai/schemas';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { ingestKnowledge } from '@/ai/flows/knowledge-base-ingestion';
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
+import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput, KnowledgeBaseIngestionOutput, IntelligentAIResponseOutput } from '@/ai/schemas';
 
 
 // Ensure Firebase Admin is initialized
