@@ -3,6 +3,7 @@
 
 import { ai } from '@/ai/genkit';
 import {
+    KnowledgeBaseIngestionInput,
     KnowledgeBaseIngestionInputSchema,
     KnowledgeBaseIngestionOutput,
     KnowledgeBaseIngestionOutputSchema,
@@ -16,8 +17,8 @@ if (!getApps().length) {
 }
 const db = getFirestore();
 
-// Simplified Knowledge Base Ingestion Flow
-export const knowledgeBaseIngestionFlow = ai.defineFlow(
+// This is the internal Genkit flow, not exported
+const knowledgeBaseIngestionFlow = ai.defineFlow(
     {
         name: 'knowledgeBaseIngestionFlow',
         inputSchema: KnowledgeBaseIngestionInputSchema,
@@ -51,3 +52,8 @@ export const knowledgeBaseIngestionFlow = ai.defineFlow(
         }
     }
 );
+
+// This is the exported async function that complies with 'use server'
+export async function ingestKnowledge(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
+    return await knowledgeBaseIngestionFlow(input);
+}

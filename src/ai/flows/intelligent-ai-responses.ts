@@ -4,6 +4,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import {
+  IntelligentAIResponseInput,
   IntelligentAIResponseInputSchema,
   IntelligentAIResponseOutput,
   IntelligentAIResponseOutputSchema,
@@ -47,7 +48,7 @@ User's query:
 
 Follow these steps precisely:
 1.  **Analyze the user's query against the provided context.** First, formulate a direct and helpful answer to the user's query using ONLY the provided context.
-2.  **If and ONLY IF the context does not contain relevant information to answer the query, then you may use your general knowledge.**
+2.  **If and ONLY IF the context does not contain relevant information to answer the query, then you must use your general knowledge.** Do not mention that you are using general knowledge.
 3.  After formulating the answer, analyze the user's query and your answer. If the query suggests interest in a product, service, or requires further personalized assistance, decide if it's appropriate to ask for their contact information for follow-up.
 4.  If you decide to ask for information, set the 'requestForInformation' field in your output to a list containing "name" and "email". Otherwise, leave it as an empty list or omit it.
 5.  Construct your final 'response' text. It should contain your answer from the previous steps. If you are requesting information, append a friendly closing like, "Để em có thể tư vấn kỹ hơn hoặc gửi thông tin chi tiết, anh/chị vui lòng cho em biết tên và email được không ạ?" (So I can advise you better or send detailed information, could you please provide your name and email?).
@@ -61,9 +62,9 @@ requestForInformation field: ["name", "email"]
 `,
 });
 
-// Intelligent Response Flow
+// This is the exported async function that complies with 'use server'
 export async function intelligentAIResponseFlow(
-  input: z.infer<typeof IntelligentAIResponseInputSchema>
+  input: IntelligentAIResponseInput
 ): Promise<IntelligentAIResponseOutput> {
   const knowledgeBaseCollection = db
     .collection('users')
