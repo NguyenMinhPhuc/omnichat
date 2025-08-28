@@ -65,7 +65,7 @@ const extractionPrompt = ai.definePrompt({
     Do not summarize. Do not add any commentary. Return only the extracted text.
 
     Source:
-    {{{sourceToProcess}}}
+    {{media url=sourceToProcess}}
     `,
 });
 
@@ -77,35 +77,33 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
     },
     async ({ source, userId }) => {
         try {
-            // 1. Let Genkit process the source URL or data URI using the {{media}} helper.
-            const sourceToProcess = `{{media url="${source.content}"}}`;
+            // 1. Extract text from the source using the AI prompt.
+            // Genkit handles the media processing via the `media` helper in the prompt.
+            const { output } = await extractionPrompt({ sourceToProcess: source.content });
 
-            // 2. Extract text from the source.
-            const { output } = await extractionPrompt({ sourceToProcess });
-
-            // 3. Validate extracted content
+            // 2. Validate extracted content
             if (!output || !output.text || !output.text.trim()) {
                 return { success: false, message: "Could not extract any text from the source. The file might be empty, too large, or in an unsupported format." };
             }
             const extractedContent = output.text;
 
-            // 4. Split the extracted text into chunks
+            // 3. Split the extracted text into chunks
             const chunks = await splitTextIntoChunks(extractedContent, 1000, 100);
             
             if (chunks.length === 0) {
                  return { success: false, message: "Failed to split the document into processable chunks. The content might be empty." };
             }
 
-            // 5. Create Document objects for Genkit
+            // 4. Create Document objects for Genkit
             const documents = chunks.map(chunk => Document.fromText(chunk));
 
-            // 6. Index the documents (creates embeddings)
+            // 5. Index the documents (creates embeddings)
             const indexedDocs = await index({
                 documents,
                 embedder,
             });
 
-            // 7. Store the indexed documents (vectors) in Firestore
+            // 6. Store the indexed documents (vectors) in Firestore
             const vectorStoreCollection = db.collection('users').doc(userId).collection('vector_store');
             const batch = db.batch();
 
