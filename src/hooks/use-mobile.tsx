@@ -6,23 +6,21 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false)
 
   React.useEffect(() => {
-    // This code now runs only on the client, after the component has mounted.
-    // This prevents a mismatch between the server-rendered and client-rendered output.
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const checkDevice = () => {
+      setIsMobile(window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`).matches)
+    }
 
-    const onChange = (event: MediaQueryListEvent) => {
-      setIsMobile(event.matches);
-    };
+    // Check on initial mount
+    checkDevice()
 
-    // Set the initial value correctly on the client
-    setIsMobile(mql.matches);
+    // Add listener for window resize
+    window.addEventListener('resize', checkDevice)
 
-    mql.addEventListener("change", onChange);
-
+    // Cleanup listener on component unmount
     return () => {
-      mql.removeEventListener("change", onChange);
-    };
-  }, []);
+      window.removeEventListener('resize', checkDevice)
+    }
+  }, [])
 
-  return isMobile;
+  return isMobile
 }
