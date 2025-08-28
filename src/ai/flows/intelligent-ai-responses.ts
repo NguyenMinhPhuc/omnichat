@@ -36,7 +36,7 @@ Here is the context (knowledge base) you should use as your primary source of in
 - {{{this}}}
 {{/each}}
 {{else}}
-No context provided.
+No context provided. You must rely on your general knowledge.
 {{/if}}
 </context>
 

@@ -62,7 +62,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
-      text: "Hello! I'm your AI assistant. How can I help you based on the provided documents?",
+      text: "Hello! I'm your AI assistant. How can I help you?",
     },
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
@@ -103,13 +103,6 @@ export default function Dashboard() {
     const userMessage: Message = { sender: 'user', text };
     setMessages(prev => [...prev, userMessage]);
     setIsAiTyping(true);
-
-    if (!knowledgeBase) {
-      const aiMessage: Message = { sender: 'ai', text: "I haven't been configured with any knowledge. Please upload a document first." };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsAiTyping(false);
-      return;
-    }
 
     const aiResult = await getAIResponse({ query: text, userId: user.uid });
 
