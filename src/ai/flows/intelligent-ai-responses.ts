@@ -5,23 +5,22 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import {
   IntelligentAIResponseInput,
-  IntelligentAIResponseInputSchema,
   IntelligentAIResponseOutput,
   IntelligentAIResponseOutputSchema,
 } from '@/ai/schemas';
 import {getFirestore} from 'firebase-admin/firestore';
 import {getApps, initializeApp} from 'firebase-admin/app';
 
-// Ensure Firebase Admin is initialized
-if (!getApps().length) {
-  initializeApp();
-}
-const db = getFirestore();
-
 // This is the exported async function that complies with 'use server'
 export async function intelligentAIResponseFlow(
   input: IntelligentAIResponseInput
 ): Promise<IntelligentAIResponseOutput> {
+  // Ensure Firebase Admin is initialized
+  if (!getApps().length) {
+    initializeApp();
+  }
+  const db = getFirestore();
+
   // RAG Prompt for Intelligent Responses with lead capture
   const leadCapturePrompt = ai.definePrompt({
     name: 'leadCapturePrompt',
