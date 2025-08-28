@@ -7,7 +7,6 @@ import { ingestKnowledge } from '@/ai/flows/knowledge-base-ingestion';
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput, KnowledgeBaseIngestionOutput, IntelligentAIResponseOutput } from '@/ai/schemas';
 
-
 // Ensure Firebase Admin is initialized
 if (!getApps().length) {
   initializeApp();

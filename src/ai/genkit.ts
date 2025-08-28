@@ -1,4 +1,3 @@
-'use server';
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
@@ -10,5 +9,3 @@ export const ai = genkit({
   logLevel: 'debug',
   enableTracingAndMetrics: true,
 });
-
-export const embedder = googleAI.embedder('text-embedding-004');
