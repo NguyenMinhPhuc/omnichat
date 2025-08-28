@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -118,7 +119,7 @@ export default function CustomizationPanel({
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+        toast({ title: 'Ingestion Failed', description: errorMessage, variant: 'destructive' });
     } finally {
         setIsUploading(false);
     }
@@ -235,3 +236,5 @@ export default function CustomizationPanel({
     </Card>
   );
 }
+
+    
