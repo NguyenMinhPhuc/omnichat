@@ -1,7 +1,7 @@
 
 'use server'
 
-import { Document } from 'genkit/document';
+import { Document } from 'genkit';
 import { ai, embedder } from '@/ai/genkit';
 import {
     KnowledgeBaseIngestionInputSchema,

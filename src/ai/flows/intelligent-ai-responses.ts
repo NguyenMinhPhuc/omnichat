@@ -1,7 +1,7 @@
 
 'use server'
 
-import { Document, retrieve } from 'genkit/document';
+import { Document, retrieve } from 'genkit';
 import { ai, embedder } from '@/ai/genkit';
 import {
     IntelligentAIResponseInputSchema,
