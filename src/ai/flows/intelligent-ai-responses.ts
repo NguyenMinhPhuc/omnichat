@@ -41,13 +41,18 @@ const ragPrompt = ai.definePrompt({
       context: z.array(z.string()),
     }) },
     output: {schema: IntelligentAIResponseOutputSchema},
-    prompt: `You are an intelligent AI assistant. Your task is to answer the user's query based ONLY on the provided context.
-If the context does not contain the answer, state that you do not have enough information to answer. Do not use any external knowledge.
+    prompt: `You are an intelligent AI assistant. Your task is to answer the user's query.
+Prioritize using the provided context to formulate your answer.
+If the context does not contain the answer or is not relevant to the query, use your general knowledge to respond.
 
 Context:
+{{#if context}}
 {{#each context}}
 - {{{this}}}
 {{/each}}
+{{else}}
+No context provided.
+{{/if}}
 
 User Query:
 {{{query}}}
@@ -66,7 +71,7 @@ const intelligentAIResponseFlow = ai.defineFlow(
     const vectorStoreSnapshot = await vectorStoreCollection.get();
 
     if (vectorStoreSnapshot.empty) {
-        return { response: "No knowledge base has been configured for this chatbot. Please upload documents first." };
+        return { response: "I haven't been configured with any knowledge. Please upload a document first." };
     }
 
     const documents = vectorStoreSnapshot.docs.map(doc => Document.fromObject(doc.data()));
@@ -79,10 +84,6 @@ const intelligentAIResponseFlow = ai.defineFlow(
     });
 
     const context = relevantDocs.map(doc => doc.content[0].text || '');
-
-    if (context.length === 0) {
-       return { response: "I couldn't find any relevant information in your documents to answer that question." };
-    }
     
     const {output} = await ragPrompt({ query, context });
     return output!;
