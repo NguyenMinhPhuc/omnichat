@@ -1,16 +1,17 @@
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
 
-export const ai = genkit({
+import {genkit, configureGenkit} from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
+import {genkitNext} from '@genkit-ai/next';
+
+export const ai = configureGenkit({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY,
     }),
+    genkitNext(),
   ],
-  // Since we are not running in a serverless environment, we need to specify where to store flow state.
-  flowStateStore: 'firebase',
-  // And since we are using Firebase, we need to configure it.
-  firebase: {}, // Firebase config is read from gcloud project settings.
+  logLevel: "debug",
+  enableTracingAndMetrics: true,
 });
 
 export const embedder = googleAI.embedder('text-embedding-004');

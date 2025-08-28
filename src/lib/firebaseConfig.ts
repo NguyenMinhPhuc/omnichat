@@ -1,3 +1,4 @@
+
 // This file is intended for server-side configuration retrieval.
 // Do not import this file in client-side components.
 

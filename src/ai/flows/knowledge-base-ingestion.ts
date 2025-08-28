@@ -1,13 +1,11 @@
-import { config } from 'dotenv';
-config();
 
-import { Document, retrieve } from 'genkit';
+'use server'
+
+import { Document } from 'genkit/document';
 import { ai, embedder } from '@/ai/genkit';
 import {
     KnowledgeBaseIngestionInputSchema,
     KnowledgeBaseIngestionOutputSchema,
-    IntelligentAIResponseInputSchema,
-    IntelligentAIResponseOutputSchema,
 } from '@/ai/schemas';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
@@ -22,7 +20,6 @@ const db = getFirestore();
 // Text Extraction Sub-Flow
 const extractionPrompt = ai.definePrompt({
     name: 'knowledgeExtractionPrompt',
-    model: 'googleai/gemini-1.5-flash-latest',
     input: { schema: z.object({ sourceToProcess: z.string() }) },
     output: { schema: z.object({ text: z.string() }) },
     prompt: `You are an expert at extracting raw text content from various sources.
@@ -35,7 +32,7 @@ const extractionPrompt = ai.definePrompt({
 });
 
 // Knowledge Base Ingestion Flow
-ai.defineFlow(
+export const knowledgeBaseIngestionFlow = ai.defineFlow(
     {
         name: 'knowledgeBaseIngestionFlow',
         inputSchema: KnowledgeBaseIngestionInputSchema,
@@ -83,10 +80,6 @@ ai.defineFlow(
 
             await batch.commit();
 
-            // This is now done in a separate action
-            // const userDocRef = db.collection('users').doc(userId);
-            // await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
-
             return {
                 success: true,
                 message: `Knowledge base updated successfully with ${indexedDocs.length} new text chunks.`
@@ -99,67 +92,6 @@ ai.defineFlow(
         }
     }
 );
-
-
-// RAG Prompt for Intelligent Responses
-const ragPrompt = ai.definePrompt({
-    name: 'ragPrompt',
-    model: 'googleai/gemini-1.5-flash-latest',
-    input: { schema: z.object({
-      query: z.string(),
-      context: z.array(z.string()),
-    }) },
-    output: {schema: IntelligentAIResponseOutputSchema},
-    prompt: `You are an intelligent AI assistant. Your task is to answer the user's query.
-Prioritize using the provided context to formulate your answer.
-If the context does not contain the answer or is not relevant to the query, use your general knowledge to respond.
-
-Context:
-{{#if context}}
-{{#each context}}
-- {{{this}}}
-{{/each}}
-{{else}}
-No context provided.
-{{/if}}
-
-User Query:
-{{{query}}}
-
-Answer:`,
-});
-
-// Intelligent Response Flow
-ai.defineFlow(
-  {
-    name: 'intelligentAIResponseFlow',
-    inputSchema: IntelligentAIResponseInputSchema,
-    outputSchema: IntelligentAIResponseOutputSchema,
-  },
-  async ({ userId, query }) => {
-    const vectorStoreCollection = db.collection('users').doc(userId).collection('vector_store');
-    const vectorStoreSnapshot = await vectorStoreCollection.get();
-
-    if (vectorStoreSnapshot.empty) {
-        return { response: "I haven't been configured with any knowledge. Please upload a document first." };
-    }
-
-    const documents = vectorStoreSnapshot.docs.map(doc => Document.fromObject(doc.data()));
-
-    const relevantDocs = await retrieve({
-        query,
-        embedder,
-        documents,
-        options: { k: 5 },
-    });
-
-    const context = relevantDocs.map(doc => doc.content[0].text || '');
-    
-    const {output} = await ragPrompt({ query, context });
-    return output!;
-  }
-);
-
 
 /**
  * Splits a long text into smaller chunks based on a specified chunk size and overlap.
