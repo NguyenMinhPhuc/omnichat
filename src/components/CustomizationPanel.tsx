@@ -104,6 +104,7 @@ export default function CustomizationPanel({
                  toast({ title: 'Ingestion Failed for Some Files', description: `Could not process ${totalFailed} file(s). Last error: ${lastErrorMessage}`, variant: 'destructive' });
             }
             // Early return to prevent falling through
+            setIsUploading(false);
             return;
         } else if (ingestionSource === 'url' && url) {
             result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'url', content: url }});
@@ -112,6 +113,7 @@ export default function CustomizationPanel({
              result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
         } else {
             toast({ title: 'No source selected', description: 'Please select a file, enter a URL, or provide text.', variant: 'destructive' });
+            setIsUploading(false);
             return;
         }
 
