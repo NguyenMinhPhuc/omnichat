@@ -52,12 +52,18 @@ export default function CustomizationPanel({
     }
   };
   
-  const readFileAsDataURL = (file: File): Promise<string> => {
+  const readAsDataURL = (source: File | string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = reject;
-      reader.readAsDataURL(file);
+
+      if (typeof source === 'string') {
+        const blob = new Blob([source], { type: 'text/plain' });
+        reader.readAsDataURL(blob);
+      } else {
+        reader.readAsDataURL(source);
+      }
     });
   };
 
@@ -68,21 +74,22 @@ export default function CustomizationPanel({
     }
     
     setIsUploading(true);
-    let totalSuccess = 0;
-    let totalFailed = 0;
-    let lastErrorMessage = '';
-
+    
     try {
-        if (ingestionSource === 'file' && files) {
+        let result;
+        if (ingestionSource === 'file' && files && files.length > 0) {
+            let totalSuccess = 0;
+            let totalFailed = 0;
+            let lastErrorMessage = '';
             for (const file of Array.from(files)) {
                 try {
-                    const dataUri = await readFileAsDataURL(file);
-                    const result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
-                    if (result.success) {
+                    const dataUri = await readAsDataURL(file);
+                    const fileResult = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
+                    if (fileResult.success) {
                         totalSuccess++;
                     } else {
                         totalFailed++;
-                        lastErrorMessage = result.message;
+                        lastErrorMessage = fileResult.message;
                     }
                 } catch (fileError) {
                     totalFailed++;
@@ -96,27 +103,27 @@ export default function CustomizationPanel({
             if (totalFailed > 0) {
                  toast({ title: 'Ingestion Failed for Some Files', description: `Could not process ${totalFailed} file(s). Last error: ${lastErrorMessage}`, variant: 'destructive' });
             }
-
+            // Early return to prevent falling through
+            return;
         } else if (ingestionSource === 'url' && url) {
-            const result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'url', content: url }});
-             if (result.success) {
-                toast({ title: 'Ingestion Successful', description: result.message });
-                if (result.knowledgeBase) setKnowledgeBase(result.knowledgeBase);
-            } else {
-                toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
-            }
+            result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'url', content: url }});
         } else if (ingestionSource === 'text' && text) {
-             const dataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(text)))}`;
-             const result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
-             if (result.success) {
-                toast({ title: 'Ingestion Successful', description: result.message });
-                if (result.knowledgeBase) setKnowledgeBase(result.knowledgeBase);
-            } else {
-                toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
-            }
+             const dataUri = await readAsDataURL(text);
+             result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
         } else {
             toast({ title: 'No source selected', description: 'Please select a file, enter a URL, or provide text.', variant: 'destructive' });
+            return;
         }
+
+        if (result) {
+            if (result.success) {
+                toast({ title: 'Ingestion Successful', description: result.message });
+                if (result.knowledgeBase) setKnowledgeBase(result.knowledgeBase);
+            } else {
+                toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
+            }
+        }
+
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
         toast({ title: 'Ingestion Failed', description: errorMessage, variant: 'destructive' });
@@ -236,5 +243,3 @@ export default function CustomizationPanel({
     </Card>
   );
 }
-
-    

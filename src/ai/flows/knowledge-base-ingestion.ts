@@ -77,10 +77,10 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
     },
     async ({ source, userId }) => {
         try {
-            // 1. Let Genkit process the source URL or data URI.
+            // 1. Let Genkit process the source URL or data URI using the {{media}} helper.
             const sourceToProcess = `{{media url="${source.content}"}}`;
 
-            // 2. Extract text from the source using the correct prompt invocation.
+            // 2. Extract text from the source.
             const { output } = await extractionPrompt({ sourceToProcess });
 
             // 3. Validate extracted content
