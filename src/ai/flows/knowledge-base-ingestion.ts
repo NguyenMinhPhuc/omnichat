@@ -5,6 +5,7 @@ import { Document } from 'genkit';
 import { ai, embedder } from '@/ai/genkit';
 import {
     KnowledgeBaseIngestionInputSchema,
+    KnowledgeBaseIngestionOutput,
     KnowledgeBaseIngestionOutputSchema,
 } from '@/ai/schemas';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -38,7 +39,7 @@ export const knowledgeBaseIngestionFlow = ai.defineFlow(
         inputSchema: KnowledgeBaseIngestionInputSchema,
         outputSchema: KnowledgeBaseIngestionOutputSchema,
     },
-    async ({ source, userId }) => {
+    async ({ source, userId }): Promise<KnowledgeBaseIngestionOutput> => {
         try {
             let extractedText = '';
 

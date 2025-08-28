@@ -5,6 +5,7 @@ import { Document, retrieve } from 'genkit';
 import { ai, embedder } from '@/ai/genkit';
 import {
     IntelligentAIResponseInputSchema,
+    IntelligentAIResponseOutput,
     IntelligentAIResponseOutputSchema,
 } from '@/ai/schemas';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -52,7 +53,7 @@ export const intelligentAIResponseFlow = ai.defineFlow(
     inputSchema: IntelligentAIResponseInputSchema,
     outputSchema: IntelligentAIResponseOutputSchema,
   },
-  async ({ userId, query }) => {
+  async ({ userId, query }): Promise<IntelligentAIResponseOutput> => {
     const vectorStoreCollection = db.collection('users').doc(userId).collection('vector_store');
     const vectorStoreSnapshot = await vectorStoreCollection.get();
 
