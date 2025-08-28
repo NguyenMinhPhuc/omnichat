@@ -18,17 +18,21 @@ if (!getApps().length) {
 }
 const db = getFirestore();
 
-// RAG Prompt for Intelligent Responses with lead capture
-const leadCapturePrompt = ai.definePrompt({
-  name: 'leadCapturePrompt',
-  input: {
-    schema: z.object({
-      query: z.string(),
-      context: z.array(z.string()),
-    }),
-  },
-  output: {schema: IntelligentAIResponseOutputSchema},
-  prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions. Your secondary goal is to identify opportunities to capture user information (leads).
+// This is the exported async function that complies with 'use server'
+export async function intelligentAIResponseFlow(
+  input: IntelligentAIResponseInput
+): Promise<IntelligentAIResponseOutput> {
+  // RAG Prompt for Intelligent Responses with lead capture
+  const leadCapturePrompt = ai.definePrompt({
+    name: 'leadCapturePrompt',
+    input: {
+      schema: z.object({
+        query: z.string(),
+        context: z.array(z.string()),
+      }),
+    },
+    output: {schema: IntelligentAIResponseOutputSchema},
+    prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions. Your secondary goal is to identify opportunities to capture user information (leads).
 
 Here is the context (knowledge base) you should use as your primary source of information:
 <context>
@@ -60,12 +64,8 @@ Analysis: This is a direct inquiry about a product. It's a good opportunity for 
 Final response text: "The premium plan is $50/month. Để em có thể tư vấn kỹ hơn về các tính năng của gói này, anh/chị vui lòng cho em biết tên và email được không ạ?"
 requestForInformation field: ["name", "email"]
 `,
-});
+  });
 
-// This is the exported async function that complies with 'use server'
-export async function intelligentAIResponseFlow(
-  input: IntelligentAIResponseInput
-): Promise<IntelligentAIResponseOutput> {
   const knowledgeBaseCollection = db
     .collection('users')
     .doc(input.userId)
