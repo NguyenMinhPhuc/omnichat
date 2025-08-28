@@ -1,8 +1,8 @@
 'use server';
-import {configureGenkit} from 'genkit';
+import * as genkit from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 
-export const ai = configureGenkit({
+export const ai = genkit.configureGenkit({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY,
