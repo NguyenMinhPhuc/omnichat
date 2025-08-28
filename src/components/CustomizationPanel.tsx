@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload, Palette, FileText, History, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { Upload, Palette, FileText, History, Link as LinkIcon, Loader2, Text } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
 import { handleDocumentIngestion } from '@/app/actions';
+import { Textarea } from './ui/textarea';
 
 interface CustomizationPanelProps {
   customization: CustomizationState;
@@ -22,7 +23,7 @@ interface CustomizationPanelProps {
   chatbotId: string;
 }
 
-type IngestionSource = 'file' | 'url';
+type IngestionSource = 'file' | 'url' | 'text';
 
 export default function CustomizationPanel({
   customization,
@@ -31,8 +32,9 @@ export default function CustomizationPanel({
   chatbotId,
 }: CustomizationPanelProps) {
   const { user } = useAuth();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<FileList | null>(null);
   const [url, setUrl] = useState('');
+  const [text, setText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const [ingestionSource, setIngestionSource] = useState<IngestionSource>('file');
@@ -45,7 +47,7 @@ export default function CustomizationPanel({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFile(e.target.files[0]);
+      setFiles(e.target.files);
     }
   };
   
@@ -65,26 +67,54 @@ export default function CustomizationPanel({
     }
     
     setIsUploading(true);
-    try {
-        let result;
-        if (ingestionSource === 'file' && file) {
-            const dataUri = await readFileAsDataURL(file);
-            result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
-        } else if (ingestionSource === 'url' && url) {
-            result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'url', content: url }});
-        } else {
-            toast({ title: 'No source selected', description: 'Please select a file or enter a URL.', variant: 'destructive' });
-            setIsUploading(false);
-            return;
-        }
+    let totalSuccess = 0;
+    let totalFailed = 0;
+    let lastErrorMessage = '';
 
-        if (result.success) {
-            toast({ title: 'Ingestion Successful', description: result.message });
-            if (result.knowledgeBase) {
-                setKnowledgeBase(result.knowledgeBase);
+    try {
+        if (ingestionSource === 'file' && files) {
+            for (const file of Array.from(files)) {
+                try {
+                    const dataUri = await readFileAsDataURL(file);
+                    const result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
+                    if (result.success) {
+                        totalSuccess++;
+                    } else {
+                        totalFailed++;
+                        lastErrorMessage = result.message;
+                    }
+                } catch (fileError) {
+                    totalFailed++;
+                    lastErrorMessage = fileError instanceof Error ? fileError.message : 'An unknown error occurred while processing a file.';
+                }
+            }
+             if (totalSuccess > 0) {
+                toast({ title: 'Ingestion Complete', description: `Successfully ingested ${totalSuccess} file(s). Failed: ${totalFailed}.` });
+                setKnowledgeBase(`Processed ${totalSuccess} file(s).`);
+            }
+            if (totalFailed > 0) {
+                 toast({ title: 'Ingestion Failed for Some Files', description: `Could not process ${totalFailed} file(s). Last error: ${lastErrorMessage}`, variant: 'destructive' });
+            }
+
+        } else if (ingestionSource === 'url' && url) {
+            const result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'url', content: url }});
+             if (result.success) {
+                toast({ title: 'Ingestion Successful', description: result.message });
+                if (result.knowledgeBase) setKnowledgeBase(result.knowledgeBase);
+            } else {
+                toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
+            }
+        } else if (ingestionSource === 'text' && text) {
+             const dataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(text)))}`;
+             const result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
+             if (result.success) {
+                toast({ title: 'Ingestion Successful', description: result.message });
+                if (result.knowledgeBase) setKnowledgeBase(result.knowledgeBase);
+            } else {
+                toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
             }
         } else {
-            toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
+            toast({ title: 'No source selected', description: 'Please select a file, enter a URL, or provide text.', variant: 'destructive' });
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
@@ -114,7 +144,7 @@ export default function CustomizationPanel({
     }
   };
 
-  const isSubmitDisabled = isUploading || (ingestionSource === 'file' && !file) || (ingestionSource === 'url' && !url);
+  const isSubmitDisabled = isUploading || (ingestionSource === 'file' && !files) || (ingestionSource === 'url' && !url) || (ingestionSource === 'text' && !text);
 
   return (
     <Card>
@@ -131,18 +161,20 @@ export default function CustomizationPanel({
           </TabsList>
           <TabsContent value="content" className="pt-4">
             <Tabs defaultValue={ingestionSource} onValueChange={(value) => setIngestionSource(value as IngestionSource)} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="file"><Upload className="mr-2 h-4 w-4" />Upload File</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="file"><Upload className="mr-2 h-4 w-4" />Upload Files</TabsTrigger>
                     <TabsTrigger value="url"><LinkIcon className="mr-2 h-4 w-4" />From Website</TabsTrigger>
+                    <TabsTrigger value="text"><Text className="mr-2 h-4 w-4" />From Text</TabsTrigger>
                 </TabsList>
                 <TabsContent value="file" className="pt-4 space-y-4">
-                    <Label htmlFor="knowledge-base-file">Knowledge File</Label>
-                    <p className="text-sm text-muted-foreground">Upload a file (.txt, .pdf, .docx, .png, .jpg) to provide context.</p>
+                    <Label htmlFor="knowledge-base-file">Knowledge Files</Label>
+                    <p className="text-sm text-muted-foreground">Upload files (.txt, .pdf, .doc, .docx, .xls, .xlsx, .png, .jpg) to provide context. You can select multiple files.</p>
                     <Input 
                         id="knowledge-base-file" 
                         type="file" 
                         onChange={handleFileChange} 
-                        accept=".txt,.pdf,.doc,.docx,image/png,image/jpeg"
+                        multiple
+                        accept=".txt,.pdf,.doc,.docx,.xls,.xlsx,image/png,image/jpeg"
                     />
                 </TabsContent>
                 <TabsContent value="url" className="pt-4 space-y-4">
@@ -154,6 +186,17 @@ export default function CustomizationPanel({
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         placeholder="https://example.com"
+                    />
+                </TabsContent>
+                 <TabsContent value="text" className="pt-4 space-y-4">
+                    <Label htmlFor="knowledge-base-text">Paste Text</Label>
+                    <p className="text-sm text-muted-foreground">Copy and paste any text content directly into the box below.</p>
+                    <Textarea 
+                        id="knowledge-base-text"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        placeholder="Paste your content here..."
+                        className="min-h-[150px]"
                     />
                 </TabsContent>
             </Tabs>
