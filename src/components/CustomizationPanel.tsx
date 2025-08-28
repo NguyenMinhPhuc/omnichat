@@ -55,17 +55,20 @@ export default function CustomizationPanel({
   const readAsDataURL = (source: File | string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-
+      // For text, create a blob and read it.
       if (typeof source === 'string') {
         const blob = new Blob([source], { type: 'text/plain' });
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
         reader.readAsDataURL(blob);
-      } else {
+      } else { // For files, read them directly.
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
         reader.readAsDataURL(source);
       }
     });
   };
+
 
   const handleSubmit = async () => {
     if (!user) {
@@ -103,9 +106,9 @@ export default function CustomizationPanel({
             if (totalFailed > 0) {
                  toast({ title: 'Ingestion Failed for Some Files', description: `Could not process ${totalFailed} file(s). Last error: ${lastErrorMessage}`, variant: 'destructive' });
             }
-            // Early return to prevent falling through
+            // IMPORTANT: Early return to prevent falling through to the next logic block
             setIsUploading(false);
-            return;
+            return; 
         } else if (ingestionSource === 'url' && url) {
             result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'url', content: url }});
         } else if (ingestionSource === 'text' && text) {
