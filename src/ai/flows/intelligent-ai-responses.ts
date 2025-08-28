@@ -1,15 +1,15 @@
 
-'use server'
+'use server';
 
-import { ai } from '@/ai/genkit';
+import {ai} from '@/ai/genkit';
+import {z} from 'zod';
 import {
-    IntelligentAIResponseInputSchema,
-    IntelligentAIResponseOutput,
-    IntelligentAIResponseOutputSchema,
+  IntelligentAIResponseInputSchema,
+  IntelligentAIResponseOutput,
+  IntelligentAIResponseOutputSchema,
 } from '@/ai/schemas';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { z } from 'zod';
+import {getFirestore} from 'firebase-admin/firestore';
+import {getApps, initializeApp} from 'firebase-admin/app';
 
 // Ensure Firebase Admin is initialized
 if (!getApps().length) {
@@ -17,57 +17,80 @@ if (!getApps().length) {
 }
 const db = getFirestore();
 
-
-// RAG Prompt for Intelligent Responses
-const ragPrompt = ai.definePrompt({
-    name: 'ragPrompt',
-    input: { schema: z.object({
+// RAG Prompt for Intelligent Responses with lead capture
+const leadCapturePrompt = ai.definePrompt({
+  name: 'leadCapturePrompt',
+  input: {
+    schema: z.object({
       query: z.string(),
       context: z.array(z.string()),
-    }) },
-    output: {schema: IntelligentAIResponseOutputSchema},
-    prompt: `You are an intelligent AI assistant. Your task is to answer the user's query.
-Prioritize using the provided context to formulate your answer. The context is a list of question-answer pairs.
-Find the most relevant question in the context to answer the user's query.
-If the context does not contain the answer or is not relevant to the query, use your general knowledge to respond.
+    }),
+  },
+  output: {schema: IntelligentAIResponseOutputSchema},
+  prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions based on the provided context.
+Your secondary goal is to identify opportunities to capture user information (leads) for future customer care.
 
-Context (Question-Answer pairs):
+Here is the context (knowledge base) you should use:
+<context>
 {{#if context}}
 {{#each context}}
 - {{{this}}}
 {{/each}}
 {{else}}
-No context provided.
+No context provided. Rely on your general knowledge.
 {{/if}}
+</context>
 
-User Query:
+User's query:
+<query>
 {{{query}}}
+</query>
 
-Answer:`,
+Follow these steps:
+1.  First, formulate a direct and helpful answer to the user's query using the provided context. If the context isn't relevant, use your general knowledge.
+2.  After formulating the answer, analyze the user's query and your answer. If the query suggests interest in a product, service, or requires further personalized assistance, decide if it's appropriate to ask for their contact information for follow-up.
+3.  If you decide to ask for information, set the 'requestForInformation' field in your output to a list containing "name" and "email". Otherwise, leave it as an empty list or omit it.
+4.  Construct your final 'response' text. It should contain your answer from step 1. If you are requesting information, append a friendly closing like, "Để em có thể tư vấn kỹ hơn hoặc gửi thông tin chi tiết, anh/chị vui lòng cho em biết tên và email được không ạ?" (So I can advise you better or send detailed information, could you please provide your name and email?).
+
+Example:
+User Query: "How much does the premium plan cost?"
+Your Answer (based on context): "The premium plan is $50/month."
+Analysis: This is a direct inquiry about a product. It's a good opportunity for follow-up.
+Final response text: "The premium plan is $50/month. Để em có thể tư vấn kỹ hơn về các tính năng của gói này, anh/chị vui lòng cho em biết tên và email được không ạ?"
+requestForInformation field: ["name", "email"]
+`,
 });
 
 // Intelligent Response Flow
-export const intelligentAIResponseFlow = ai.defineFlow(
-  {
-    name: 'intelligentAIResponseFlow',
-    inputSchema: IntelligentAIResponseInputSchema,
-    outputSchema: IntelligentAIResponseOutputSchema,
-  },
-  async ({ userId, query }): Promise<IntelligentAIResponseOutput> => {
-    const knowledgeBaseCollection = db.collection('users').doc(userId).collection('knowledge_base');
-    const knowledgeSnapshot = await knowledgeBaseCollection.get();
+export async function intelligentAIResponseFlow(
+  input: z.infer<typeof IntelligentAIResponseInputSchema>
+): Promise<IntelligentAIResponseOutput> {
+  const knowledgeBaseCollection = db
+    .collection('users')
+    .doc(input.userId)
+    .collection('knowledge_base');
+  const knowledgeSnapshot = await knowledgeBaseCollection.get();
 
-    let context: string[] = [];
-    if (!knowledgeSnapshot.empty) {
-        knowledgeSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            // Format each document into a "Q: ... A: ..." string
-            context.push(`Q: ${data.question}\nA: ${data.answer}`);
-        });
-    }
-    
-    // If no context, the array will be empty, and the prompt handles it gracefully.
-    const { response } = await ragPrompt({ query, context });
-    return { response };
+  let context: string[] = [];
+  if (!knowledgeSnapshot.empty) {
+    knowledgeSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      // Format each document into a "Q: ... A: ..." string
+      context.push(`Q: ${data.question}\nA: ${data.answer}`);
+    });
   }
-);
+
+  // If no context, the array will be empty, and the prompt handles it gracefully.
+  const {output} = await leadCapturePrompt({
+    query: input.query,
+    context,
+  });
+
+  if (!output) {
+    return {
+      response:
+        "I'm sorry, I had trouble generating a response. Please try again.",
+    };
+  }
+  return output;
+}

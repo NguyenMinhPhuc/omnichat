@@ -37,7 +37,8 @@ export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInpu
 export async function getAIResponse(input: IntelligentAIResponseInput): Promise<IntelligentAIResponseOutput> {
   try {
     const result = await intelligentAIResponseFlow(input);
-    return result;
+    // Ensure we always return a valid structure, even if the flow fails unexpectedly.
+    return result || { response: "Sorry, I couldn't get a response. Please try again." };
   } catch (error) {
     console.error("Error getting AI response:", error);
     return { response: "Sorry, I encountered an error communicating with the AI service. Please try again." };
