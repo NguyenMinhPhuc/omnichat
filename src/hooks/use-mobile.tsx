@@ -6,6 +6,11 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false)
 
   React.useEffect(() => {
+    // Check if window is defined to ensure this runs only on the client
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
 
     // This function will be called when the media query status changes
@@ -13,8 +18,7 @@ export function useIsMobile() {
       setIsMobile(event.matches)
     }
 
-    // Set the initial value correctly after the component has mounted
-    // This is the key to preventing hydration errors.
+    // Set the initial value after the component has mounted
     setIsMobile(mql.matches)
 
     // Add the event listener for future changes
