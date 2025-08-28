@@ -1,6 +1,5 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/context/AuthContext';
 import { Suspense } from 'react';
 
@@ -26,7 +25,6 @@ export default function RootLayout({
             <Suspense fallback={<div>Loading...</div>}>
                 {children}
             </Suspense>
-          <Toaster />
         </AuthProvider>
       </body>
     </html>

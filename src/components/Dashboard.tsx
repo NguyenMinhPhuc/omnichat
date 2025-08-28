@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
+import { Toaster } from './ui/toaster';
 
 export interface CustomizationState {
   primaryColor: string;
@@ -123,6 +124,7 @@ export default function Dashboard() {
 
   return (
     <SidebarProvider>
+      <Toaster />
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center gap-2 font-headline">
