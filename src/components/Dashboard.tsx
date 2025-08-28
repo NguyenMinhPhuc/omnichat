@@ -84,22 +84,17 @@ export default function Dashboard() {
           if (data.customization) {
             setCustomization(data.customization);
           }
-           if (data.role === 'admin') {
-            router.push('/admin/dashboard');
-            return;
-          }
           setUserRole(data.role);
           setDisplayName(data.displayName || '');
           setAvatarUrl(data.avatarUrl || null);
-          // We check for the last update timestamp now instead of the content
           if (data.knowledgeBaseLastUpdatedAt) {
-            setKnowledgeBase(data.knowledgeBaseLastUpdatedAt); // Indicate that KB exists
+            setKnowledgeBase(data.knowledgeBaseLastUpdatedAt);
           }
         }
       };
       fetchUserData();
     }
-  }, [user, router]);
+  }, [user]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || !user) return;
