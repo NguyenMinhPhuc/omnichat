@@ -13,15 +13,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionInputSchema } from '@/ai/schemas';
-
-// This output schema is now just a simple object with the text, or an error.
-export const KnowledgeBaseIngestionOutputSchema = z.object({
-  success: z.boolean(),
-  text: z.string().optional(),
-  message: z.string().optional(),
-});
-export type KnowledgeBaseIngestionOutput = z.infer<typeof KnowledgeBaseIngestionOutputSchema>;
+import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionInputSchema, KnowledgeBaseIngestionOutput, KnowledgeBaseIngestionOutputSchema } from '@/ai/schemas';
 
 
 const extractionPrompt = ai.definePrompt({

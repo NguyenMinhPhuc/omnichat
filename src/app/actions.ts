@@ -3,7 +3,7 @@
 
 import { intelligentAIResponse } from '@/ai/flows/intelligent-ai-responses'
 import { knowledgeBaseIngestion } from '@/ai/flows/knowledge-base-ingestion';
-import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput, StoreKnowledgeBaseInput } from '@/ai/schemas';
+import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput, StoreKnowledgeBaseInput, KnowledgeBaseIngestionOutput } from '@/ai/schemas';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { Document } from 'genkit';
@@ -44,7 +44,7 @@ function splitTextIntoChunks(text: string, chunkSize: number, chunkOverlap: numb
 }
 
 
-export async function handleTextExtraction(input: KnowledgeBaseIngestionInput) {
+export async function handleTextExtraction(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
     try {
         // Step 1: Call the simplified Genkit flow to just extract text
         const result = await knowledgeBaseIngestion(input);

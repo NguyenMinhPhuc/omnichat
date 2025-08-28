@@ -11,7 +11,14 @@ export const KnowledgeBaseIngestionInputSchema = z.object({
 });
 export type KnowledgeBaseIngestionInput = z.infer<typeof KnowledgeBaseIngestionInputSchema>;
 
-// This output is now handled by the server action and doesn't need a specific schema here.
+// This output schema is for the text extraction flow.
+export const KnowledgeBaseIngestionOutputSchema = z.object({
+  success: z.boolean(),
+  text: z.string().optional(),
+  message: z.string().optional(),
+});
+export type KnowledgeBaseIngestionOutput = z.infer<typeof KnowledgeBaseIngestionOutputSchema>;
+
 
 // Schema for storing the extracted text (Step 2: Vectorization & Storage)
 export const StoreKnowledgeBaseInputSchema = z.object({
