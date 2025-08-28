@@ -1,14 +1,14 @@
-
+'use server';
 import {configureGenkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import {nextPlugin} from '@genkit-ai/next';
+import {genkitNext} from '@genkit-ai/next';
 
 export const ai = configureGenkit({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY,
     }),
-    nextPlugin,
+    genkitNext(),
   ],
   logLevel: 'debug',
   enableTracingAndMetrics: true,
