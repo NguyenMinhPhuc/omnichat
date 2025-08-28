@@ -1,102 +1,67 @@
 
 'use server'
 
-import { intelligentAIResponse } from '@/ai/flows/intelligent-ai-responses'
-import { knowledgeBaseIngestion } from '@/ai/flows/knowledge-base-ingestion';
-import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput, StoreKnowledgeBaseInput, KnowledgeBaseIngestionOutput } from '@/ai/schemas';
+import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput, KnowledgeBaseIngestionOutput } from '@/ai/schemas';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
-import { Document } from 'genkit';
-import * as genkit from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
 
 // Ensure Firebase Admin is initialized
 if (!getApps().length) {
   initializeApp();
 }
 const db = getFirestore();
+const genkitApiUrl = process.env.NEXT_PUBLIC_GENKIT_API_URL;
 
-// Define the embedding model
-const embedder = googleAI.embedder('text-embedding-004');
-
-
-/**
- * Splits a long text into smaller chunks based on a specified chunk size and overlap.
- * @param text The full text to be split.
- * @param chunkSize The maximum size of each chunk.
- * @param chunkOverlap The number of characters to overlap between chunks.
- * @returns An array of text chunks.
- */
-function splitTextIntoChunks(text: string, chunkSize: number, chunkOverlap: number): string[] {
-    if (chunkOverlap >= chunkSize) {
-        throw new Error("chunkOverlap must be smaller than chunkSize.");
+async function callGenkitFlow<Input, Output>(flowId: string, input: Input): Promise<Output> {
+    if (!genkitApiUrl) {
+        throw new Error("Genkit API URL is not configured. Please set NEXT_PUBLIC_GENKIT_API_URL.");
     }
-
-    const chunks: string[] = [];
-    let i = 0;
-    while (i < text.length) {
-        const end = Math.min(i + chunkSize, text.length);
-        chunks.push(text.substring(i, end));
-        i += (chunkSize - chunkOverlap);
-        if (i >= text.length) break;
-    }
-    return chunks;
-}
-
-
-export async function handleTextExtraction(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
+    
+    const url = `${genkitApiUrl}/flow/${flowId}?stream=false`;
+    
     try {
-        // Step 1: Call the simplified Genkit flow to just extract text
-        const result = await knowledgeBaseIngestion(input);
-        return result;
-    } catch (error) {
-        console.error("Error handling document ingestion:", error);
-        return { success: false, message: "An unexpected error occurred during text extraction." };
-    }
-}
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ input }),
+        });
 
-export async function storeKnowledgeBase(input: StoreKnowledgeBaseInput) {
-    try {
-        const { text, userId } = input;
-
-        // Step 2: Split the extracted text into chunks
-        const chunks = splitTextIntoChunks(text, 1000, 100);
-        if (chunks.length === 0) {
-             return { success: false, message: "Failed to split the document into processable chunks. The content might be empty." };
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`Error from Genkit API (${response.status}):`, errorBody);
+            throw new Error(`Request to Genkit flow '${flowId}' failed with status ${response.status}`);
         }
 
-        // Step 3: Create Document objects for Genkit
-        const documents = chunks.map(chunk => Document.fromText(chunk));
+        const result = await response.json();
+        // The actual flow output is nested under the 'output' key
+        return result.output;
+    } catch (error) {
+        console.error(`Failed to call Genkit flow '${flowId}':`, error);
+        if (error instanceof Error) {
+           throw new Error(`Network or API error calling Genkit: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while calling the Genkit flow.");
+    }
+}
 
-        // Step 4: Index the documents (creates embeddings)
-        const indexedDocs = await genkit.index({
-            documents,
-            embedder,
-        });
 
-        // Step 5: Store the indexed documents (vectors) in Firestore
-        const vectorStoreCollection = db.collection('users').doc(userId).collection('vector_store');
-        const batch = db.batch();
-
-        indexedDocs.forEach(doc => {
-            const docRef = vectorStoreCollection.doc(); // Auto-generate ID
-            batch.set(docRef, Document.toObject(doc));
-        });
-
-        await batch.commit();
-
-        // Update the main user doc to confirm it's updated.
-        const userDocRef = db.collection('users').doc(userId);
-        await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
-
-        return {
-            success: true,
-            message: `Knowledge base updated successfully with ${indexedDocs.length} new text chunks.`
-        };
+export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
+    try {
+        const result = await callGenkitFlow<KnowledgeBaseIngestionInput, KnowledgeBaseIngestionOutput>('knowledgeBaseIngestionFlow', input);
+        
+        // If the ingestion was successful, update the user's document timestamp
+        if (result.success) {
+            const userDocRef = db.collection('users').doc(input.userId);
+            await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        }
+        
+        return result;
 
     } catch (error) {
-        console.error("Error during knowledge base storage:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during storage.";
+        console.error("Error handling document ingestion:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during ingestion.";
         return { success: false, message: errorMessage };
     }
 }
@@ -104,10 +69,10 @@ export async function storeKnowledgeBase(input: StoreKnowledgeBaseInput) {
 
 export async function getAIResponse(input: IntelligentAIResponseInput) {
   try {
-    const result = await intelligentAIResponse(input);
+    const result = await callGenkitFlow<IntelligentAIResponseInput, { response: string }>('intelligentAIResponseFlow', input);
     return result;
   } catch (error) {
     console.error("Error getting AI response:", error);
-    return { response: "Sorry, I encountered an error. Please try again." };
+    return { response: "Sorry, I encountered an error communicating with the AI service. Please try again." };
   }
 }

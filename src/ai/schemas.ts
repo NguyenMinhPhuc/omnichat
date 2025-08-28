@@ -1,31 +1,21 @@
 
 import { z } from 'zod';
 
-// Schema for knowledge base ingestion (Step 1: Text Extraction)
+// Schema for knowledge base ingestion
 export const KnowledgeBaseIngestionInputSchema = z.object({
   source: z.object({
-      type: z.enum(['dataUri', 'url']),
-      content: z.string().describe("A file represented as a data URI or a valid URL.")
+      type: z.enum(['dataUri', 'url', 'text']), // Added 'text' type
+      content: z.string().describe("A file as a data URI, a URL, or raw text.")
   }),
   userId: z.string().describe('The ID of the user for whom to ingest the knowledge base.'),
 });
 export type KnowledgeBaseIngestionInput = z.infer<typeof KnowledgeBaseIngestionInputSchema>;
 
-// This output schema is for the text extraction flow.
 export const KnowledgeBaseIngestionOutputSchema = z.object({
   success: z.boolean(),
-  text: z.string().optional(),
   message: z.string().optional(),
 });
 export type KnowledgeBaseIngestionOutput = z.infer<typeof KnowledgeBaseIngestionOutputSchema>;
-
-
-// Schema for storing the extracted text (Step 2: Vectorization & Storage)
-export const StoreKnowledgeBaseInputSchema = z.object({
-  text: z.string().describe('The extracted text content to be vectorized and stored.'),
-  userId: z.string().describe('The ID of the user for whom to store the knowledge base.'),
-});
-export type StoreKnowledgeBaseInput = z.infer<typeof StoreKnowledgeBaseInputSchema>;
 
 
 // Schema for intelligent AI responses

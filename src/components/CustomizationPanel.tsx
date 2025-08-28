@@ -14,7 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
-import { handleTextExtraction, storeKnowledgeBase } from '@/app/actions';
+import { handleKnowledgeIngestion } from '@/app/actions';
 import { Textarea } from './ui/textarea';
 
 interface CustomizationPanelProps {
@@ -69,63 +69,32 @@ export default function CustomizationPanel({
     }
     
     setIsUploading(true);
+    let result = { success: false, message: 'No source selected. Please select a file, enter a URL, or provide text.' };
 
     try {
-        let storageSuccess = false;
         if (ingestionSource === 'file' && files && files.length > 0) {
-            let successCount = 0;
-            for (const file of Array.from(files)) {
-                const dataUri = await readAsDataURL(file);
-                const extractionResult = await handleTextExtraction({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
-                
-                if (extractionResult.success && extractionResult.text) {
-                    const storeResult = await storeKnowledgeBase({ userId: user.uid, text: extractionResult.text });
-                    if (storeResult.success) {
-                        successCount++;
-                        storageSuccess = true;
-                    } else {
-                         toast({ title: `Storage Failed for ${file.name}`, description: storeResult.message, variant: 'destructive' });
-                    }
-                } else {
-                    toast({ title: `Extraction Failed for ${file.name}`, description: extractionResult.message, variant: 'destructive' });
-                }
-            }
-             if (successCount > 0) {
-                toast({ title: 'Ingestion Successful', description: `${successCount}/${files.length} file(s) processed and added to the knowledge base.` });
-            }
-
+            // For now, handle one file at a time to simplify UX
+            const file = files[0];
+            const dataUri = await readAsDataURL(file);
+            toast({ title: `Processing ${file.name}`, description: 'Extracting text, creating embeddings, and storing in knowledge base...' });
+            result = await handleKnowledgeIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
         } else if (ingestionSource === 'url' && url) {
-            const extractionResult = await handleTextExtraction({ userId: user.uid, source: { type: 'url', content: url }});
-             if (extractionResult.success && extractionResult.text) {
-                const storeResult = await storeKnowledgeBase({ userId: user.uid, text: extractionResult.text });
-                 if (storeResult.success) {
-                    toast({ title: 'Ingestion Successful', description: storeResult.message });
-                    storageSuccess = true;
-                } else {
-                     toast({ title: 'Storage Failed', description: storeResult.message, variant: 'destructive' });
-                }
-            } else {
-                toast({ title: 'Extraction Failed', description: extractionResult.message, variant: 'destructive' });
-            }
-
+            toast({ title: 'Processing URL', description: 'Scraping website, creating embeddings, and storing in knowledge base...' });
+            result = await handleKnowledgeIngestion({ userId: user.uid, source: { type: 'url', content: url }});
         } else if (ingestionSource === 'text' && text) {
-             // Directly store the text without AI extraction
-             toast({ title: 'Processing Text', description: 'Now processing and storing the knowledge base...' });
-             const storeResult = await storeKnowledgeBase({ userId: user.uid, text: text });
-              if (storeResult.success) {
-                toast({ title: 'Ingestion Successful', description: storeResult.message });
-                storageSuccess = true;
-            } else {
-                 toast({ title: 'Storage Failed', description: storeResult.message, variant: 'destructive' });
-            }
+             toast({ title: 'Processing Text', description: 'Creating embeddings and storing in knowledge base...' });
+             result = await handleKnowledgeIngestion({ userId: user.uid, source: { type: 'text', content: text }});
         } else {
             toast({ title: 'No source selected', description: 'Please select a file, enter a URL, or provide text.', variant: 'destructive' });
             setIsUploading(false);
             return;
         }
 
-        if (storageSuccess) {
+        if (result.success) {
+            toast({ title: 'Ingestion Successful', description: result.message });
             setKnowledgeBase(serverTimestamp()); // Update the parent state with a new timestamp
+        } else {
+            toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
         }
 
     } catch (error) {
