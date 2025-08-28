@@ -3,55 +3,25 @@
 /**
  * @fileOverview This flow handles the ingestion and processing of various document types
  * (text, PDF, DOCX, images) and website URLs to create a knowledge base for the chatbot.
- * It uses a multimodal AI model to extract text content, chunks it, creates embeddings,
- * and stores them in a vector store for later retrieval.
+ * It now focuses *only* on extracting text content using a multimodal AI model.
+ * The chunking and vector storage is handled by a separate server action.
  *
  * - knowledgeBaseIngestion - The main function that processes the input and returns the extracted text.
  * - KnowledgeBaseIngestionInput - The input type for the flow.
- * - KnowledgeBaseIngestionOutput - The return type for the flow.
+ * - KnowledgeBaseIngestionOutput - The return type for the flow, which is now just the extracted text.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { Document } from 'genkit';
-import * as genkit from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
-import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionOutput, KnowledgeBaseIngestionInputSchema, KnowledgeBaseIngestionOutputSchema } from '@/ai/schemas';
+import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionInputSchema } from '@/ai/schemas';
 
-
-// Ensure Firebase Admin is initialized
-if (!getApps().length) {
-  initializeApp();
-}
-const db = getFirestore();
-
-// Define the embedding model
-const embedder = googleAI.embedder('text-embedding-004');
-
-/**
- * Splits a long text into smaller chunks based on a specified chunk size and overlap.
- * This is a simplified, self-contained alternative to RecursiveCharacterTextSplitter.
- * @param text The full text to be split.
- * @param chunkSize The maximum size of each chunk.
- * @param chunkOverlap The number of characters to overlap between chunks.
- * @returns A promise that resolves to an array of text chunks.
- */
-async function splitTextIntoChunks(text: string, chunkSize: number, chunkOverlap: number): Promise<string[]> {
-    if (chunkOverlap >= chunkSize) {
-        throw new Error("chunkOverlap must be smaller than chunkSize.");
-    }
-
-    const chunks: string[] = [];
-    let i = 0;
-    while (i < text.length) {
-        const end = Math.min(i + chunkSize, text.length);
-        chunks.push(text.substring(i, end));
-        i += (chunkSize - chunkOverlap);
-    }
-    return chunks;
-}
+// This output schema is now just a simple object with the text, or an error.
+export const KnowledgeBaseIngestionOutputSchema = z.object({
+  success: z.boolean(),
+  text: z.string().optional(),
+  message: z.string().optional(),
+});
+export type KnowledgeBaseIngestionOutput = z.infer<typeof KnowledgeBaseIngestionOutputSchema>;
 
 
 const extractionPrompt = ai.definePrompt({
@@ -76,60 +46,24 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
         inputSchema: KnowledgeBaseIngestionInputSchema,
         outputSchema: KnowledgeBaseIngestionOutputSchema,
     },
-    async ({ source, userId }) => {
+    async ({ source }) => {
         try {
             // 1. Extract text from the source using the AI prompt.
-            // Genkit handles the media processing via the `media` helper in the prompt.
             const { output } = await extractionPrompt({ sourceToProcess: source.content });
 
             // 2. Validate extracted content
             if (!output || !output.text || !output.text.trim()) {
                 return { success: false, message: "Could not extract any text from the source. The file might be empty, too large, or in an unsupported format." };
             }
-            const extractedContent = output.text;
-
-            // 3. Split the extracted text into chunks
-            const chunks = await splitTextIntoChunks(extractedContent, 1000, 100);
             
-            if (chunks.length === 0) {
-                 return { success: false, message: "Failed to split the document into processable chunks. The content might be empty." };
-            }
-
-            // 4. Create Document objects for Genkit
-            const documents = chunks.map(chunk => Document.fromText(chunk));
-
-            // 5. Index the documents (creates embeddings)
-            const indexedDocs = await genkit.index({
-                documents,
-                embedder,
-            });
-
-            // 6. Store the indexed documents (vectors) in Firestore
-            const vectorStoreCollection = db.collection('users').doc(userId).collection('vector_store');
-            const batch = db.batch();
-
-            indexedDocs.forEach(doc => {
-                const docRef = vectorStoreCollection.doc(); // Auto-generate ID
-                batch.set(docRef, Document.toObject(doc));
-            });
-
-            await batch.commit();
-
-            // To avoid storing large KBs in the main user doc, we'll just confirm it's updated.
-            const userDocRef = db.collection('users').doc(userId);
-            await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
-
-
             return {
                 success: true,
-                message: `Knowledge base updated successfully with ${indexedDocs.length} new text chunks.`,
-                knowledgeBase: `Processed ${indexedDocs.length} chunks.`,
+                text: output.text,
             };
         } catch (error) {
             console.error("Error during knowledge base ingestion flow:", error);
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during ingestion.";
             
-            // Check for quota-related errors
             if (/(quota|rate limit|resource has been exhausted)/i.test(errorMessage)) {
                 return {
                     success: false,

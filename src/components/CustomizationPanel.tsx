@@ -14,7 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
-import { handleDocumentIngestion } from '@/app/actions';
+import { handleTextExtraction, storeKnowledgeBase } from '@/app/actions';
 import { Textarea } from './ui/textarea';
 
 interface CustomizationPanelProps {
@@ -77,56 +77,63 @@ export default function CustomizationPanel({
     }
     
     setIsUploading(true);
-    
+
     try {
-        let result;
+        let extractedText = '';
+        let extractionSuccess = false;
+        let extractionMessage = '';
+
+        // Step 1: Extract text from the selected source
         if (ingestionSource === 'file' && files && files.length > 0) {
-            let totalSuccess = 0;
-            let totalFailed = 0;
-            let lastErrorMessage = '';
-            for (const file of Array.from(files)) {
-                try {
-                    const dataUri = await readAsDataURL(file);
-                    const fileResult = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
-                    if (fileResult.success) {
-                        totalSuccess++;
-                    } else {
-                        totalFailed++;
-                        lastErrorMessage = fileResult.message;
-                    }
-                } catch (fileError) {
-                    totalFailed++;
-                    lastErrorMessage = fileError instanceof Error ? fileError.message : 'An unknown error occurred while processing a file.';
-                }
+            // For now, we'll process one file at a time to simplify UX.
+            // In a future version, you could loop and aggregate results.
+            const file = files[0];
+            const dataUri = await readAsDataURL(file);
+            const extractionResult = await handleTextExtraction({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
+            if (extractionResult.success && extractionResult.text) {
+                extractedText = extractionResult.text;
+                extractionSuccess = true;
+            } else {
+                extractionMessage = extractionResult.message || 'Failed to extract text from file.';
             }
-             if (totalSuccess > 0) {
-                toast({ title: 'Ingestion Complete', description: `Successfully ingested ${totalSuccess} file(s). Failed: ${totalFailed}.` });
-                setKnowledgeBase(`Processed ${totalSuccess} file(s).`);
-            }
-            if (totalFailed > 0) {
-                 toast({ title: 'Ingestion Failed for Some Files', description: `Could not process ${totalFailed} file(s). Last error: ${lastErrorMessage}`, variant: 'destructive' });
-            }
-            // IMPORTANT: Early return to prevent falling through to the next logic block
-            setIsUploading(false);
-            return; 
+
         } else if (ingestionSource === 'url' && url) {
-            result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'url', content: url }});
+            const extractionResult = await handleTextExtraction({ userId: user.uid, source: { type: 'url', content: url }});
+             if (extractionResult.success && extractionResult.text) {
+                extractedText = extractionResult.text;
+                extractionSuccess = true;
+            } else {
+                extractionMessage = extractionResult.message || 'Failed to extract text from URL.';
+            }
+
         } else if (ingestionSource === 'text' && text) {
              const dataUri = await readAsDataURL(text);
-             result = await handleDocumentIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
+             const extractionResult = await handleTextExtraction({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
+             if (extractionResult.success && extractionResult.text) {
+                extractedText = extractionResult.text;
+                extractionSuccess = true;
+            } else {
+                extractionMessage = extractionResult.message || 'Failed to extract text from input.';
+            }
         } else {
             toast({ title: 'No source selected', description: 'Please select a file, enter a URL, or provide text.', variant: 'destructive' });
             setIsUploading(false);
             return;
         }
 
-        if (result) {
-            if (result.success) {
-                toast({ title: 'Ingestion Successful', description: result.message });
-                if (result.knowledgeBase) setKnowledgeBase(result.knowledgeBase);
+        // Step 2: If extraction was successful, store the knowledge base
+        if (extractionSuccess) {
+            toast({ title: 'Text Extracted', description: 'Now processing and storing the knowledge base...' });
+            const storeResult = await storeKnowledgeBase({ userId: user.uid, text: extractedText });
+
+            if (storeResult.success) {
+                toast({ title: 'Ingestion Successful', description: storeResult.message });
+                setKnowledgeBase(storeResult.message || 'Knowledge base updated.');
             } else {
-                toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
+                 toast({ title: 'Storage Failed', description: storeResult.message, variant: 'destructive' });
             }
+        } else {
+            toast({ title: 'Extraction Failed', description: extractionMessage, variant: 'destructive' });
         }
 
     } catch (error) {
@@ -134,6 +141,12 @@ export default function CustomizationPanel({
         toast({ title: 'Ingestion Failed', description: errorMessage, variant: 'destructive' });
     } finally {
         setIsUploading(false);
+        // Clear inputs after processing
+        setFiles(null);
+        setUrl('');
+        setText('');
+        const fileInput = document.getElementById('knowledge-base-file') as HTMLInputElement;
+        if(fileInput) fileInput.value = '';
     }
   };
 
@@ -175,18 +188,17 @@ export default function CustomizationPanel({
           <TabsContent value="content" className="pt-4">
             <Tabs defaultValue={ingestionSource} onValueChange={(value) => setIngestionSource(value as IngestionSource)} className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="file"><Upload className="mr-2 h-4 w-4" />Upload Files</TabsTrigger>
+                    <TabsTrigger value="file"><Upload className="mr-2 h-4 w-4" />Upload File</TabsTrigger>
                     <TabsTrigger value="url"><LinkIcon className="mr-2 h-4 w-4" />From Website</TabsTrigger>
                     <TabsTrigger value="text"><Text className="mr-2 h-4 w-4" />From Text</TabsTrigger>
                 </TabsList>
                 <TabsContent value="file" className="pt-4 space-y-4">
-                    <Label htmlFor="knowledge-base-file">Knowledge Files</Label>
-                    <p className="text-sm text-muted-foreground">Upload files (.txt, .pdf, .doc, .docx, .xls, .xlsx, .png, .jpg) to provide context. You can select multiple files.</p>
+                    <Label htmlFor="knowledge-base-file">Knowledge File</Label>
+                    <p className="text-sm text-muted-foreground">Upload a file (.txt, .pdf, .doc, .docx, .xls, .xlsx, .png, .jpg) to provide context. One file at a time.</p>
                     <Input 
                         id="knowledge-base-file" 
                         type="file" 
                         onChange={handleFileChange} 
-                        multiple
                         accept=".txt,.pdf,.doc,.docx,.xls,.xlsx,image/png,image/jpeg"
                     />
                 </TabsContent>
