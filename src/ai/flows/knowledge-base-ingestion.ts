@@ -15,7 +15,8 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
-import { Document, index } from 'genkit';
+import { Document } from 'genkit';
+import * as genkit from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { KnowledgeBaseIngestionInput, KnowledgeBaseIngestionOutput, KnowledgeBaseIngestionInputSchema, KnowledgeBaseIngestionOutputSchema } from '@/ai/schemas';
 
@@ -98,7 +99,7 @@ const knowledgeBaseIngestionFlow = ai.defineFlow(
             const documents = chunks.map(chunk => Document.fromText(chunk));
 
             // 5. Index the documents (creates embeddings)
-            const indexedDocs = await index({
+            const indexedDocs = await genkit.index({
                 documents,
                 embedder,
             });
