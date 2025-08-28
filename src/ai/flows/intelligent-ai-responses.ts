@@ -1,8 +1,7 @@
 
 'use server'
 
-import { Document, retrieve } from 'genkit';
-import { ai, embedder } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import {
     IntelligentAIResponseInputSchema,
     IntelligentAIResponseOutput,
@@ -28,10 +27,11 @@ const ragPrompt = ai.definePrompt({
     }) },
     output: {schema: IntelligentAIResponseOutputSchema},
     prompt: `You are an intelligent AI assistant. Your task is to answer the user's query.
-Prioritize using the provided context to formulate your answer.
+Prioritize using the provided context to formulate your answer. The context is a list of question-answer pairs.
+Find the most relevant question in the context to answer the user's query.
 If the context does not contain the answer or is not relevant to the query, use your general knowledge to respond.
 
-Context:
+Context (Question-Answer pairs):
 {{#if context}}
 {{#each context}}
 - {{{this}}}
@@ -54,27 +54,20 @@ export const intelligentAIResponseFlow = ai.defineFlow(
     outputSchema: IntelligentAIResponseOutputSchema,
   },
   async ({ userId, query }): Promise<IntelligentAIResponseOutput> => {
-    const vectorStoreCollection = db.collection('users').doc(userId).collection('vector_store');
-    const vectorStoreSnapshot = await vectorStoreCollection.get();
+    const knowledgeBaseCollection = db.collection('users').doc(userId).collection('knowledge_base');
+    const knowledgeSnapshot = await knowledgeBaseCollection.get();
 
-    if (vectorStoreSnapshot.empty) {
-        // Instead of returning a hardcoded message, let the AI handle it with no context.
-        const { output } = await ragPrompt({ query, context: [] });
-        return output!;
+    let context: string[] = [];
+    if (!knowledgeSnapshot.empty) {
+        knowledgeSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            // Format each document into a "Q: ... A: ..." string
+            context.push(`Q: ${data.question}\nA: ${data.answer}`);
+        });
     }
-
-    const documents = vectorStoreSnapshot.docs.map(doc => Document.fromObject(doc.data()));
-
-    const relevantDocs = await retrieve({
-        query,
-        embedder,
-        documents,
-        options: { k: 5 },
-    });
-
-    const context = relevantDocs.map(doc => doc.content[0].text || '');
     
-    const {output} = await ragPrompt({ query, context });
+    // If no context, the array will be empty, and the prompt handles it gracefully.
+    const { output } = await ragPrompt({ query, context });
     return output!;
   }
 );

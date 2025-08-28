@@ -3,10 +3,8 @@ import { z } from 'zod';
 
 // Schema for knowledge base ingestion
 export const KnowledgeBaseIngestionInputSchema = z.object({
-  source: z.object({
-      type: z.enum(['dataUri', 'url', 'text']), // Added 'text' type
-      content: z.string().describe("A file as a data URI, a URL, or raw text.")
-  }),
+  question: z.string().describe("The question, keyword, or topic."),
+  answer: z.string().describe("The corresponding answer or content."),
   userId: z.string().describe('The ID of the user for whom to ingest the knowledge base.'),
 });
 export type KnowledgeBaseIngestionInput = z.infer<typeof KnowledgeBaseIngestionInputSchema>;

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload, Palette, FileText, History, Link as LinkIcon, Loader2, Text } from 'lucide-react';
+import { Upload, Palette, History, Loader2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -24,8 +24,6 @@ interface CustomizationPanelProps {
   chatbotId: string;
 }
 
-type IngestionSource = 'file' | 'url' | 'text';
-
 export default function CustomizationPanel({
   customization,
   setCustomization,
@@ -33,12 +31,10 @@ export default function CustomizationPanel({
   chatbotId,
 }: CustomizationPanelProps) {
   const { user } = useAuth();
-  const [files, setFiles] = useState<FileList | null>(null);
-  const [url, setUrl] = useState('');
-  const [text, setText] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const [ingestionSource, setIngestionSource] = useState<IngestionSource>('file');
 
   const updateFirestore = async (data: any) => {
     if (!user) return;
@@ -46,68 +42,40 @@ export default function CustomizationPanel({
     await setDoc(userDocRef, data, { merge: true });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(e.target.files);
-    }
-  };
-  
-  const readAsDataURL = (source: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(source);
-    });
-  };
-
-
   const handleSubmit = async () => {
     if (!user) {
         toast({ title: 'Not logged in', description: 'Please log in to update the knowledge base.', variant: 'destructive' });
         return;
     }
+    if (!question.trim() || !answer.trim()) {
+        toast({ title: 'Missing Information', description: 'Please provide both a question and an answer.', variant: 'destructive' });
+        return;
+    }
     
-    setIsUploading(true);
-    let result = { success: false, message: 'No source selected. Please select a file, enter a URL, or provide text.' };
-
+    setIsSaving(true);
+    
     try {
-        if (ingestionSource === 'file' && files && files.length > 0) {
-            // For now, handle one file at a time to simplify UX
-            const file = files[0];
-            const dataUri = await readAsDataURL(file);
-            toast({ title: `Processing ${file.name}`, description: 'Extracting text, creating embeddings, and storing in knowledge base...' });
-            result = await handleKnowledgeIngestion({ userId: user.uid, source: { type: 'dataUri', content: dataUri }});
-        } else if (ingestionSource === 'url' && url) {
-            toast({ title: 'Processing URL', description: 'Scraping website, creating embeddings, and storing in knowledge base...' });
-            result = await handleKnowledgeIngestion({ userId: user.uid, source: { type: 'url', content: url }});
-        } else if (ingestionSource === 'text' && text) {
-             toast({ title: 'Processing Text', description: 'Creating embeddings and storing in knowledge base...' });
-             result = await handleKnowledgeIngestion({ userId: user.uid, source: { type: 'text', content: text }});
-        } else {
-            toast({ title: 'No source selected', description: 'Please select a file, enter a URL, or provide text.', variant: 'destructive' });
-            setIsUploading(false);
-            return;
-        }
+        const result = await handleKnowledgeIngestion({ 
+            userId: user.uid, 
+            question: question, 
+            answer: answer 
+        });
 
         if (result.success) {
-            toast({ title: 'Ingestion Successful', description: result.message });
+            toast({ title: 'Success', description: 'New knowledge added to your chatbot.' });
             setKnowledgeBase(serverTimestamp()); // Update the parent state with a new timestamp
+            // Clear inputs after successful submission
+            setQuestion('');
+            setAnswer('');
         } else {
-            toast({ title: 'Ingestion Failed', description: result.message, variant: 'destructive' });
+            toast({ title: 'Failed to Add Knowledge', description: result.message, variant: 'destructive' });
         }
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        toast({ title: 'Ingestion Failed', description: errorMessage, variant: 'destructive' });
+        toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     } finally {
-        setIsUploading(false);
-        // Clear inputs after processing
-        setFiles(null);
-        setUrl('');
-        setText('');
-        const fileInput = document.getElementById('knowledge-base-file') as HTMLInputElement;
-        if(fileInput) fileInput.value = '';
+        setIsSaving(false);
     }
   };
 
@@ -131,65 +99,49 @@ export default function CustomizationPanel({
     }
   };
 
-  const isSubmitDisabled = isUploading || (ingestionSource === 'file' && !files) || (ingestionSource === 'url' && !url) || (ingestionSource === 'text' && !text);
+  const isSubmitDisabled = isSaving || !question.trim() || !answer.trim();
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Chatbot Configuration</CardTitle>
-        <CardDescription>Upload content, customize the look, and view history.</CardDescription>
+        <CardDescription>Add knowledge, customize the look, and view history.</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="content">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="content"><FileText className="mr-2 h-4 w-4" /> Content</TabsTrigger>
+            <TabsTrigger value="content">
+                <Save className="mr-2 h-4 w-4" /> 
+                Content
+            </TabsTrigger>
             <TabsTrigger value="appearance"><Palette className="mr-2 h-4 w-4" /> Appearance</TabsTrigger>
             <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> Chat History</TabsTrigger>
           </TabsList>
-          <TabsContent value="content" className="pt-4">
-            <Tabs defaultValue={ingestionSource} onValueChange={(value) => setIngestionSource(value as IngestionSource)} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="file"><Upload className="mr-2 h-4 w-4" />Upload File</TabsTrigger>
-                    <TabsTrigger value="url"><LinkIcon className="mr-2 h-4 w-4" />From Website</TabsTrigger>
-                    <TabsTrigger value="text"><Text className="mr-2 h-4 w-4" />From Text</TabsTrigger>
-                </TabsList>
-                <TabsContent value="file" className="pt-4 space-y-4">
-                    <Label htmlFor="knowledge-base-file">Knowledge File</Label>
-                    <p className="text-sm text-muted-foreground">Upload files (.txt, .pdf, .doc, .docx, .xls, .xlsx, .png, .jpg) to provide context. You can select multiple files.</p>
-                    <Input 
-                        id="knowledge-base-file" 
-                        type="file" 
-                        onChange={handleFileChange} 
-                        accept=".txt,.pdf,.doc,.docx,.xls,.xlsx,image/png,image/jpeg"
-                        multiple
-                    />
-                </TabsContent>
-                <TabsContent value="url" className="pt-4 space-y-4">
-                    <Label htmlFor="knowledge-base-url">Website URL</Label>
-                    <p className="text-sm text-muted-foreground">Enter a URL to scrape the website content for context.</p>
-                    <Input 
-                        id="knowledge-base-url" 
-                        type="url" 
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        placeholder="https://example.com"
-                    />
-                </TabsContent>
-                 <TabsContent value="text" className="pt-4 space-y-4">
-                    <Label htmlFor="knowledge-base-text">Paste Text</Label>
-                    <p className="text-sm text-muted-foreground">Copy and paste any text content directly into the box below.</p>
-                    <Textarea 
-                        id="knowledge-base-text"
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        placeholder="Paste your content here..."
-                        className="min-h-[150px]"
-                    />
-                </TabsContent>
-            </Tabs>
+          <TabsContent value="content" className="pt-4 space-y-4">
+             <p className="text-sm text-muted-foreground">Add question-and-answer pairs to your chatbot's knowledge base. The AI will use this information to answer user queries.</p>
+             <div className="space-y-2">
+                <Label htmlFor="knowledge-question">Question or Keyword</Label>
+                <Input 
+                    id="knowledge-question" 
+                    type="text" 
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    placeholder="e.g., What are your opening hours?"
+                />
+             </div>
+             <div className="space-y-2">
+                <Label htmlFor="knowledge-answer">Answer or Content</Label>
+                <Textarea 
+                    id="knowledge-answer"
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder="e.g., We are open from 9 AM to 5 PM, Monday to Friday."
+                    className="min-h-[150px]"
+                />
+             </div>
             <Button onClick={handleSubmit} disabled={isSubmitDisabled} className="w-full mt-4">
-              {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-              {isUploading ? 'Ingesting...' : 'Upload & Ingest'}
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {isSaving ? 'Saving...' : 'Save to Knowledge Base'}
             </Button>
           </TabsContent>
           <TabsContent value="appearance" className="pt-4">
