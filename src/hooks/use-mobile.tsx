@@ -6,12 +6,12 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false)
 
   React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+
     // This function will be called when the media query status changes
     const onChange = (event: MediaQueryListEvent) => {
       setIsMobile(event.matches)
     }
-
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
 
     // Set the initial value correctly after the component has mounted
     // This is the key to preventing hydration errors.
