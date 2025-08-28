@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { CustomizationState } from './Dashboard';
 import { useAuth } from '@/context/AuthContext';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
 import { handleTextExtraction, storeKnowledgeBase } from '@/app/actions';
@@ -20,7 +20,7 @@ import { Textarea } from './ui/textarea';
 interface CustomizationPanelProps {
   customization: CustomizationState;
   setCustomization: React.Dispatch<React.SetStateAction<CustomizationState>>;
-  setKnowledgeBase: (kb: string) => void;
+  setKnowledgeBase: (timestamp: any) => void;
   chatbotId: string;
 }
 
@@ -71,6 +71,7 @@ export default function CustomizationPanel({
     setIsUploading(true);
 
     try {
+        let storageSuccess = false;
         if (ingestionSource === 'file' && files && files.length > 0) {
             let successCount = 0;
             for (const file of Array.from(files)) {
@@ -81,6 +82,7 @@ export default function CustomizationPanel({
                     const storeResult = await storeKnowledgeBase({ userId: user.uid, text: extractionResult.text });
                     if (storeResult.success) {
                         successCount++;
+                        storageSuccess = true;
                     } else {
                          toast({ title: `Storage Failed for ${file.name}`, description: storeResult.message, variant: 'destructive' });
                     }
@@ -90,7 +92,6 @@ export default function CustomizationPanel({
             }
              if (successCount > 0) {
                 toast({ title: 'Ingestion Successful', description: `${successCount}/${files.length} file(s) processed and added to the knowledge base.` });
-                setKnowledgeBase(`Knowledge base updated with ${successCount} file(s).`);
             }
 
         } else if (ingestionSource === 'url' && url) {
@@ -99,7 +100,7 @@ export default function CustomizationPanel({
                 const storeResult = await storeKnowledgeBase({ userId: user.uid, text: extractionResult.text });
                  if (storeResult.success) {
                     toast({ title: 'Ingestion Successful', description: storeResult.message });
-                    setKnowledgeBase(storeResult.message || 'Knowledge base updated.');
+                    storageSuccess = true;
                 } else {
                      toast({ title: 'Storage Failed', description: storeResult.message, variant: 'destructive' });
                 }
@@ -113,7 +114,7 @@ export default function CustomizationPanel({
              const storeResult = await storeKnowledgeBase({ userId: user.uid, text: text });
               if (storeResult.success) {
                 toast({ title: 'Ingestion Successful', description: storeResult.message });
-                setKnowledgeBase(storeResult.message || 'Knowledge base updated.');
+                storageSuccess = true;
             } else {
                  toast({ title: 'Storage Failed', description: storeResult.message, variant: 'destructive' });
             }
@@ -121,6 +122,10 @@ export default function CustomizationPanel({
             toast({ title: 'No source selected', description: 'Please select a file, enter a URL, or provide text.', variant: 'destructive' });
             setIsUploading(false);
             return;
+        }
+
+        if (storageSuccess) {
+            setKnowledgeBase(serverTimestamp()); // Update the parent state with a new timestamp
         }
 
     } catch (error) {

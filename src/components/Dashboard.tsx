@@ -9,7 +9,7 @@ import { getAIResponse } from '@/app/actions';
 import type { Message } from './ChatbotPreview';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import EmbedGuide from './EmbedGuide';
 import {
@@ -57,7 +57,7 @@ export default function Dashboard() {
   
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [knowledgeBase, setKnowledgeBase] = useState<string>('');
+  const [knowledgeBase, setKnowledgeBase] = useState<Timestamp | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
@@ -93,7 +93,7 @@ export default function Dashboard() {
           setAvatarUrl(data.avatarUrl || null);
           // We check for the last update timestamp now instead of the content
           if (data.knowledgeBaseLastUpdatedAt) {
-            setKnowledgeBase('ready'); // Indicate that KB exists
+            setKnowledgeBase(data.knowledgeBaseLastUpdatedAt); // Indicate that KB exists
           }
         }
       };
