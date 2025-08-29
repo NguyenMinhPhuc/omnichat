@@ -15,10 +15,8 @@ const db = getFirestore();
 
 export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
     try {
-        // Call the new async wrapper function
         const result = await ingestKnowledge(input);
         
-        // If the ingestion was successful, update the user's document timestamp
         if (result.success) {
             const userDocRef = db.collection('users').doc(input.userId);
             await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -33,12 +31,37 @@ export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInpu
     }
 }
 
+interface GetAIResponseInput {
+    query: string;
+    userId: string;
+}
 
-export async function getAIResponse(input: IntelligentAIResponseInput): Promise<IntelligentAIResponseOutput> {
+export async function getAIResponse({ query, userId }: GetAIResponseInput): Promise<IntelligentAIResponseOutput> {
   try {
-    const result = await intelligentAIResponseFlow(input);
-    // Ensure we always return a valid structure, even if the flow fails unexpectedly.
+    // 1. Fetch context from Firestore
+    const knowledgeBaseCollection = db
+      .collection('users')
+      .doc(userId)
+      .collection('knowledge_base');
+    const knowledgeSnapshot = await knowledgeBaseCollection.get();
+    
+    let context: string[] = [];
+    if (!knowledgeSnapshot.empty) {
+      knowledgeSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        context.push(`Q: ${data.question}\nA: ${data.answer}`);
+      });
+    }
+
+    // 2. Call the AI flow with the fetched context
+    const result = await intelligentAIResponseFlow({
+        query,
+        userId,
+        context
+    });
+    
     return result || { response: "Sorry, I couldn't get a response. Please try again." };
+
   } catch (error) {
     console.error("Error getting AI response:", error);
     return { response: "Sorry, I encountered an error communicating with the AI service. Please try again." };

@@ -20,6 +20,7 @@ export type KnowledgeBaseIngestionOutput = z.infer<typeof KnowledgeBaseIngestion
 export const IntelligentAIResponseInputSchema = z.object({
   query: z.string().describe('The user query.'),
   userId: z.string().describe('The ID of the user to fetch the knowledge base for.'),
+  context: z.array(z.string()).describe('The knowledge base context.'),
 });
 export type IntelligentAIResponseInput = z.infer<typeof IntelligentAIResponseInputSchema>;
 

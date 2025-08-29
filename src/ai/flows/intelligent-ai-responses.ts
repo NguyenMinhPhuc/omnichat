@@ -9,40 +9,18 @@ import {
   IntelligentAIResponseOutputSchema,
   IntelligentAIResponseInputSchema,
 } from '@/ai/schemas';
-import {getFirestore} from 'firebase-admin/firestore';
-import {getApps, initializeApp} from 'firebase-admin/app';
 
 // This is the exported async function that complies with 'use server'
 export async function intelligentAIResponseFlow(
   input: IntelligentAIResponseInput
 ): Promise<IntelligentAIResponseOutput> {
-
-  // Define the main flow for generating intelligent responses.
-  // All logic, including DB access, is contained within this flow.
-  const intelligentAIResponseFlowInternal = ai.defineFlow(
-    {
-      name: 'intelligentAIResponseFlowInternal',
-      inputSchema: IntelligentAIResponseInputSchema,
-      outputSchema: IntelligentAIResponseOutputSchema,
+  const leadCapturePrompt = ai.definePrompt({
+    name: 'leadCapturePrompt',
+    input: {
+      schema: IntelligentAIResponseInputSchema,
     },
-    async (input) => {
-      // Ensure Firebase Admin is initialized ONLY within the flow
-      if (!getApps().length) {
-        initializeApp();
-      }
-      const db = getFirestore();
-
-      // RAG Prompt for Intelligent Responses with lead capture
-      const leadCapturePrompt = ai.definePrompt({
-        name: 'leadCapturePrompt',
-        input: {
-          schema: z.object({
-            query: z.string(),
-            context: z.array(z.string()),
-          }),
-        },
-        output: {schema: IntelligentAIResponseOutputSchema},
-        prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions. Your secondary goal is to identify opportunities to capture user information (leads).
+    output: {schema: IntelligentAIResponseOutputSchema},
+    prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions. Your secondary goal is to identify opportunities to capture user information (leads).
 
 Here is the context (knowledge base) you should use as your primary source of information:
 <context>
@@ -74,32 +52,17 @@ Analysis: This is a direct inquiry about a product. It's a good opportunity for 
 Final response text: "The premium plan is $50/month. Để em có thể tư vấn kỹ hơn về các tính năng của gói này, anh/chị vui lòng cho em biết tên và email được không ạ?"
 requestForInformation field: ["name", "email"]
 `,
-      });
+  });
 
-      // Fetch context from Firestore inside the flow
-      const knowledgeBaseCollection = db
-        .collection('users')
-        .doc(input.userId)
-        .collection('knowledge_base');
-      const knowledgeSnapshot = await knowledgeBaseCollection.get();
-
-      let context: string[] = [];
-      if (!knowledgeSnapshot.empty) {
-        knowledgeSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          // Format each document into a "Q: ... A: ..." string
-          context.push(`Q: ${data.question}\nA: ${data.answer}`);
-        });
-      }
-      
-      // If no context, the array will be empty, and the prompt handles it gracefully.
-      const {output} = await leadCapturePrompt({
-        query: input.query,
-        context,
-      });
-
+  const intelligentAIResponseFlowInternal = ai.defineFlow(
+    {
+      name: 'intelligentAIResponseFlowInternal',
+      inputSchema: IntelligentAIResponseInputSchema,
+      outputSchema: IntelligentAIResponseOutputSchema,
+    },
+    async (input) => {
+      const {output} = await leadCapturePrompt(input);
       if (!output) {
-        // This case should be rare, but as a fallback:
         return {
           response:
             "I'm sorry, I had trouble generating a response. Please try again.",
@@ -109,6 +72,5 @@ requestForInformation field: ["name", "email"]
     }
   );
 
-  // Execute the defined flow
   return await intelligentAIResponseFlowInternal(input);
 }

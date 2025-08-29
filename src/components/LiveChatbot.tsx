@@ -240,5 +240,3 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     </div>
   );
 }
-
-    
