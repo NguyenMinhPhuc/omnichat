@@ -1,28 +1,39 @@
-
 'use server'
 
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
-import { ingestKnowledge } from '@/ai/flows/knowledge-base-ingestion';
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
-import type { KnowledgeBaseIngestionInput, IntelligentAIResponseInput, KnowledgeBaseIngestionOutput, IntelligentAIResponseOutput } from '@/ai/schemas';
+import type { KnowledgeBaseIngestionInput, IntelligentAIResponseOutput, KnowledgeBaseIngestionOutput } from '@/ai/schemas';
 
-// Ensure Firebase Admin is initialized
-if (!getApps().length) {
-  initializeApp();
+// Ensure Firebase Admin is initialized only when needed.
+const initializeDb = () => {
+    if (!getApps().length) {
+      initializeApp();
+    }
+    return getFirestore();
 }
-const db = getFirestore();
 
 export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
     try {
-        const result = await ingestKnowledge(input);
-        
-        if (result.success) {
-            const userDocRef = db.collection('users').doc(input.userId);
-            await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        const db = initializeDb();
+        const { userId, question, answer } = input;
+
+        if (!userId || !question || !answer) {
+            return { success: false, message: "User ID, question, and answer are required." };
         }
+
+        const knowledgeBaseCollection = db.collection('users').doc(userId).collection('knowledge_base');
         
-        return result;
+        await knowledgeBaseCollection.add({
+            question,
+            answer,
+            createdAt: new Date(),
+        });
+        
+        const userDocRef = db.collection('users').doc(userId);
+        await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        
+        return { success: true, message: `Knowledge base updated successfully.` };
 
     } catch (error) {
         console.error("Error handling document ingestion:", error);
@@ -38,6 +49,7 @@ interface GetAIResponseInput {
 
 export async function getAIResponse({ query, userId }: GetAIResponseInput): Promise<IntelligentAIResponseOutput> {
   try {
+    const db = initializeDb();
     // 1. Fetch context from Firestore
     const knowledgeBaseCollection = db
       .collection('users')
