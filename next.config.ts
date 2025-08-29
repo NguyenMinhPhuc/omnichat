@@ -1,3 +1,4 @@
+
 import type {Config} from 'next';
 
 const nextConfig: Config = {
@@ -24,6 +25,11 @@ const nextConfig: Config = {
       }
     ];
   },
+  experimental: {
+    // This is to allow cross-origin requests in the development environment.
+    // The Firebase Studio preview URL is considered a cross-origin request.
+    allowedDevOrigins: ["*.cloudworkstations.dev"],
+  }
 };
 
 export default nextConfig;
