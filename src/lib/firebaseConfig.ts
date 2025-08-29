@@ -3,10 +3,10 @@
 // Do not import this file in client-side components.
 
 export const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  "projectId": "omnichat-isnkq",
+  "appId": "1:902027615791:web:39267b9e583b5e682e30da",
+  "storageBucket": "omnichat-isnkq.appspot.com",
+  "apiKey": "AIzaSyAt2vD-OXszaQDGeCNHPsLQHD3E5XgkBWQ",
+  "authDomain": "omnichat-isnkq.firebaseapp.com",
+  "messagingSenderId": "902027615791"
 };
