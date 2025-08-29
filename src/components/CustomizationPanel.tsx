@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { CustomizationState } from './Dashboard';
 import { useAuth } from '@/context/AuthContext';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
 import { handleKnowledgeIngestion } from '@/app/actions';
@@ -63,7 +63,7 @@ export default function CustomizationPanel({
 
         if (result.success) {
             toast({ title: 'Success', description: 'New knowledge added to your chatbot.' });
-            setKnowledgeBase(serverTimestamp()); // Update the parent state with a new timestamp
+            setKnowledgeBase(new Date()); // Update the parent state with a new timestamp
             // Clear inputs after successful submission
             setQuestion('');
             setAnswer('');
