@@ -1,7 +1,6 @@
 
-import type {Config} from 'next';
-
-const nextConfig: Config = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
   async headers() {
     return [
@@ -19,8 +18,8 @@ const nextConfig: Config = {
         // This is for the embedded chatbot page
         source: '/chatbot/:id',
         headers: [
-            // This allows the page to be framed anywhere. Be careful with this in production.
-             { key: 'Content-Security-Policy', value: 'frame-ancestors *' }
+          // This allows the page to be framed anywhere. Be careful with this in production.
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' }
         ]
       }
     ];
