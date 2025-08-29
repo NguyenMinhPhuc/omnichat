@@ -1,8 +1,7 @@
-
 'use server'
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
-import { KnowledgeBaseIngestionInput, IntelligentAIResponseOutput, KnowledgeBaseIngestionOutput } from '@/ai/schemas';
+import { IntelligentAIResponseOutput } from '@/ai/schemas';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 
@@ -12,6 +11,17 @@ const initializeDb = () => {
       initializeApp();
     }
     return getFirestore();
+}
+
+interface KnowledgeBaseIngestionInput {
+  userId: string;
+  question: string;
+  answer: string;
+}
+
+interface KnowledgeBaseIngestionOutput {
+    success: boolean;
+    message?: string;
 }
 
 
