@@ -1,9 +1,9 @@
+
 'use server'
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
-import { ingestKnowledge } from '@/ai/flows/knowledge-base-ingestion';
-import type { KnowledgeBaseIngestionInput, IntelligentAIResponseOutput, KnowledgeBaseIngestionOutput } from '@/ai/schemas';
-import { getFirestore } from 'firebase-admin/firestore';
+import { KnowledgeBaseIngestionInput, IntelligentAIResponseOutput, KnowledgeBaseIngestionOutput } from '@/ai/schemas';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 
 
@@ -16,9 +16,21 @@ const initializeDb = () => {
 
 
 export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
+    const { userId, question, answer } = input;
     try {
-        const result = await ingestKnowledge(input);
-        return result;
+        const db = initializeDb();
+        
+        const knowledgeBaseCollection = db.collection('users').doc(userId).collection('knowledge_base');
+        await knowledgeBaseCollection.add({
+            question,
+            answer,
+            createdAt: FieldValue.serverTimestamp(),
+        });
+        
+        const userDocRef = db.collection('users').doc(userId);
+        await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        
+        return { success: true, message: 'Knowledge base updated successfully.' };
     } catch (error) {
         console.error("Error handling document ingestion:", error);
         const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during ingestion.";
