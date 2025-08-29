@@ -27,7 +27,7 @@ export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInpu
         await knowledgeBaseCollection.add({
             question,
             answer,
-            createdAt: new Date(),
+            createdAt: FieldValue.serverTimestamp(),
         });
         
         const userDocRef = db.collection('users').doc(userId);
