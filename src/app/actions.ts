@@ -5,7 +5,7 @@ import { IntelligentAIResponseOutput } from '@/ai/schemas';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 
-
+// Helper function to initialize Firebase Admin SDK idempotently.
 const initializeDb = () => {
     if (!getApps().length) {
       initializeApp();
@@ -24,7 +24,9 @@ interface KnowledgeBaseIngestionOutput {
     message?: string;
 }
 
-
+/**
+ * Handles the ingestion of a new question-answer pair into the user's knowledge base.
+ */
 export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
     const { userId, question, answer } = input;
     try {
@@ -38,6 +40,8 @@ export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInpu
         });
         
         const userDocRef = db.collection('users').doc(userId);
+        // Update a timestamp to indicate that the knowledge base has been modified.
+        // This can be used to invalidate caches if needed.
         await userDocRef.set({ knowledgeBaseLastUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
         
         return { success: true, message: 'Knowledge base updated successfully.' };
@@ -53,20 +57,25 @@ interface GetAIResponseInput {
     userId: string;
 }
 
+/**
+ * Fetches the knowledge base for a user and then calls the AI flow to get a response.
+ */
 export async function getAIResponse({ query, userId }: GetAIResponseInput): Promise<IntelligentAIResponseOutput> {
   try {
     const db = initializeDb();
-    // 1. Fetch context from Firestore
+    
+    // 1. Fetch context (knowledge base) from Firestore
     const knowledgeBaseCollection = db
       .collection('users')
       .doc(userId)
       .collection('knowledge_base');
-    const knowledgeSnapshot = await knowledgeBaseCollection.get();
+    const knowledgeSnapshot = await knowledgeBaseCollection.orderBy('createdAt', 'desc').limit(20).get();
     
-    let context: string[] = [];
+    const context: string[] = [];
     if (!knowledgeSnapshot.empty) {
       knowledgeSnapshot.docs.forEach(doc => {
         const data = doc.data();
+        // Format the knowledge into a simple Q&A string for the AI
         context.push(`Q: ${data.question}\nA: ${data.answer}`);
       });
     }
@@ -74,14 +83,14 @@ export async function getAIResponse({ query, userId }: GetAIResponseInput): Prom
     // 2. Call the AI flow with the fetched context
     const result = await intelligentAIResponseFlow({
         query,
-        userId,
+        userId, // Passing userId in case it's needed for future AI logic
         context
     });
     
-    return result || { response: "Sorry, I couldn't get a response. Please try again." };
+    return result;
 
   } catch (error) {
     console.error("Error getting AI response:", error);
-    return { response: "Sorry, I encountered an error communicating with the AI service. Please try again." };
+    return { response: "Sorry, I encountered an error communicating with the AI service. Please check the server logs." };
   }
 }

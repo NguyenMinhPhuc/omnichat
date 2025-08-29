@@ -1,8 +1,6 @@
-
 'use server';
 
 import {ai} from '@/ai/genkit';
-import {z} from 'zod';
 import {
   IntelligentAIResponseInput,
   IntelligentAIResponseOutput,
@@ -14,24 +12,33 @@ import {
 export async function intelligentAIResponseFlow(
   input: IntelligentAIResponseInput
 ): Promise<IntelligentAIResponseOutput> {
-  const leadCapturePrompt = ai.definePrompt({
-    name: 'leadCapturePrompt',
-    input: {
-      schema: IntelligentAIResponseInputSchema,
-    },
-    output: {schema: IntelligentAIResponseOutputSchema},
-    prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions. Your secondary goal is to identify opportunities to capture user information (leads).
+  return await intelligentAIResponseFlowInternal(input);
+}
 
-Here is the context (knowledge base) you should use as your primary source of information:
-<context>
+
+// Define the prompt with a more descriptive name
+const leadCaptureAndResponsePrompt = ai.definePrompt({
+  name: 'leadCaptureAndResponsePrompt',
+  input: {
+    schema: IntelligentAIResponseInputSchema,
+  },
+  output: {
+    schema: IntelligentAIResponseOutputSchema
+  },
+  prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions based on the provided knowledge base. Your secondary goal is to identify opportunities to capture user information (leads).
+
+Here is the knowledge base you should use as your primary source of information:
+<knowledge_base>
 {{#if context}}
 {{#each context}}
-- {{{this}}}
+---
+{{{this}}}
+---
 {{/each}}
 {{else}}
-No context provided. You must rely on your general knowledge.
+There is no information in the knowledge base. You must rely on your general knowledge.
 {{/if}}
-</context>
+</knowledge_base>
 
 User's query:
 <query>
@@ -39,8 +46,8 @@ User's query:
 </query>
 
 Follow these steps precisely:
-1.  **Analyze the user's query against the provided context.** First, formulate a direct and helpful answer to the user's query using ONLY the provided context.
-2.  **If and ONLY IF the context does not contain relevant information to answer the query, then you must use your general knowledge.** Do not mention that you are using general knowledge.
+1.  **Analyze the user's query against the provided knowledge base.** First, formulate a direct and helpful answer to the user's query using ONLY the provided knowledge base.
+2.  **If and ONLY IF the knowledge base does not contain relevant information to answer the query, then you must use your general knowledge.** Do not mention that you are using general knowledge or that you are an AI.
 3.  After formulating the answer, analyze the user's query and your answer. If the query suggests interest in a product, service, or requires further personalized assistance, decide if it's appropriate to ask for their contact information for follow-up.
 4.  If you decide to ask for information, set the 'requestForInformation' field in your output to a list containing "name" and "email". Otherwise, leave it as an empty list or omit it.
 5.  Construct your final 'response' text. It should contain your answer from the previous steps. If you are requesting information, append a friendly closing like, "Để em có thể tư vấn kỹ hơn hoặc gửi thông tin chi tiết, anh/chị vui lòng cho em biết tên và email được không ạ?" (So I can advise you better or send detailed information, could you please provide your name and email?).
@@ -52,25 +59,24 @@ Analysis: This is a direct inquiry about a product. It's a good opportunity for 
 Final response text: "The premium plan is $50/month. Để em có thể tư vấn kỹ hơn về các tính năng của gói này, anh/chị vui lòng cho em biết tên và email được không ạ?"
 requestForInformation field: ["name", "email"]
 `,
-  });
+});
 
-  const intelligentAIResponseFlowInternal = ai.defineFlow(
-    {
-      name: 'intelligentAIResponseFlowInternal',
-      inputSchema: IntelligentAIResponseInputSchema,
-      outputSchema: IntelligentAIResponseOutputSchema,
-    },
-    async (input) => {
-      const {output} = await leadCapturePrompt(input);
-      if (!output) {
-        return {
-          response:
-            "I'm sorry, I had trouble generating a response. Please try again.",
-        };
-      }
-      return output;
+// The internal Genkit flow is defined at the module's top-level scope.
+const intelligentAIResponseFlowInternal = ai.defineFlow(
+  {
+    name: 'intelligentAIResponseFlowInternal',
+    inputSchema: IntelligentAIResponseInputSchema,
+    outputSchema: IntelligentAIResponseOutputSchema,
+  },
+  async (input) => {
+    const {output} = await leadCaptureAndResponsePrompt(input);
+    if (!output) {
+      // This provides a more specific error message if the AI model fails to generate output.
+      return {
+        response:
+          "I'm sorry, the AI model failed to generate a response. Please try again.",
+      };
     }
-  );
-
-  return await intelligentAIResponseFlowInternal(input);
-}
+    return output;
+  }
+);
