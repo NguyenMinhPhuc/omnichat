@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { Suspense } from 'react';
+import FloatingChatbot from '@/components/FloatingChatbot';
 
 export const metadata: Metadata = {
   title: 'OmniChat',
@@ -24,6 +25,7 @@ export default function RootLayout({
         <AuthProvider>
             <Suspense fallback={<div>Loading...</div>}>
                 {children}
+                <FloatingChatbot />
             </Suspense>
         </AuthProvider>
       </body>
