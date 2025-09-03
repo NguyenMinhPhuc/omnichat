@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Palette, History } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
 import type { CustomizationState } from './Dashboard';
 import { useAuth } from '@/context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
@@ -17,7 +15,6 @@ import ChatHistory from './ChatHistory';
 interface CustomizationPanelProps {
   customization: CustomizationState;
   setCustomization: React.Dispatch<React.SetStateAction<CustomizationState>>;
-  setKnowledgeBase: (timestamp: any) => void;
   chatbotId: string;
 }
 
@@ -27,7 +24,6 @@ export default function CustomizationPanel({
   chatbotId,
 }: CustomizationPanelProps) {
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const updateFirestore = async (data: any) => {
     if (!user) return;

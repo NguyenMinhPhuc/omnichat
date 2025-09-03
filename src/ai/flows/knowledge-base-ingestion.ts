@@ -1,3 +1,1 @@
-
-// This file is intentionally left blank. The logic has been moved to src/app/actions.ts
-// to resolve authentication and execution context issues.
+// This file is no longer used and is intentionally left blank.
