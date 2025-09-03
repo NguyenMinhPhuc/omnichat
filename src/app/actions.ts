@@ -11,7 +11,7 @@ interface GetAIResponseInput {
 /**
  * Fetches an AI response without a knowledge base context from Firestore.
  */
-export async function getAIResponse({ query, userId }: GetAIResponseInput): Promise<IntelligentAIResponseOutput> {
+export async function getAIResponse({ query, userId }: GetAIResponseİnput): Promise<IntelligentAIResponseOutput> {
   try {
     // Calling the AI flow with an empty context because Firestore connection is disabled.
     const result = await intelligentAIResponseFlow({
