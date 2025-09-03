@@ -4,18 +4,27 @@
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { IntelligentAIResponseOutput } from '@/ai/schemas';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, getApp, App } from 'firebase-admin/app';
 import { firebaseConfig } from '@/lib/firebaseConfig';
 
 // Helper function to initialize Firebase Admin SDK idempotently.
 const initializeDb = () => {
-    if (!getApps().length) {
-      // Pass config to initializeApp to ensure it connects to the correct project.
-      initializeApp({
-          credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!)),
-          ...firebaseConfig
-      });
+    if (getApps().length) {
+      return getFirestore();
     }
+
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+        throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not set in the environment variables.');
+    }
+    
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+
+    // Pass config to initializeApp to ensure it connects to the correct project.
+    initializeApp({
+        credential: cert(serviceAccount),
+        ...firebaseConfig
+    });
+    
     return getFirestore();
 }
 
