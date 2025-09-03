@@ -4,23 +4,25 @@
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { IntelligentAIResponseOutput } from '@/ai/schemas';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert, getApp, App } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { firebaseConfig } from '@/lib/firebaseConfig';
 import { serviceAccount } from '@/lib/firebaseServiceAccountKey';
 
 // Helper function to initialize Firebase Admin SDK idempotently.
 const initializeDb = () => {
-    if (getApps().length > 0 && getApps().find(app => app.name === '[DEFAULT]')) {
-      return getFirestore();
+    const appName = 'firebase-admin';
+    // Check if the app is already initialized
+    if (getApps().some(app => app.name === appName)) {
+      return getApp(appName).firestore();
     }
     
-    // Pass config to initializeApp to ensure it connects to the correct project.
+    // Initialize the app if not already initialized
     initializeApp({
         credential: cert(serviceAccount),
-        ...firebaseConfig
-    });
+        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+    }, appName);
     
-    return getFirestore();
+    return getFirestore(getApp(appName));
 }
 
 interface KnowledgeBaseIngestionInput {
