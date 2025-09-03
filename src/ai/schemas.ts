@@ -10,8 +10,5 @@ export type IntelligentAIResponseInput = z.infer<typeof IntelligentAIResponseInp
 
 export const IntelligentAIResponseOutputSchema = z.object({
   response: z.string().describe('The chatbot\'s textual response to the user query.'),
-  requestForInformation: z.array(z.enum(["name", "email", "phone"]))
-    .optional()
-    .describe('An optional list of personal information fields the chatbot should request from the user for follow-up.'),
 });
 export type IntelligentAIResponseOutput = z.infer<typeof IntelligentAIResponseOutputSchema>;
