@@ -3,27 +3,9 @@
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { IntelligentAIResponseOutput } from '@/ai/schemas';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
-import { firebaseConfig } from '@/lib/firebaseConfig';
-import { serviceAccount } from '@/lib/firebaseServiceAccountKey';
+import { FieldValue } from 'firebase-admin/firestore';
+import { db } from '@/lib/firebaseServiceAccountKey';
 
-// Helper function to initialize Firebase Admin SDK idempotently.
-const initializeDb = () => {
-    const appName = 'firebase-admin';
-    // Check if the app is already initialized
-    if (getApps().some(app => app.name === appName)) {
-      return getApp(appName).firestore();
-    }
-    
-    // Initialize the app if not already initialized
-    initializeApp({
-        credential: cert(serviceAccount),
-        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-    }, appName);
-    
-    return getFirestore(getApp(appName));
-}
 
 interface KnowledgeBaseIngestionInput {
   userId: string;
@@ -42,8 +24,6 @@ interface KnowledgeBaseIngestionOutput {
 export async function handleKnowledgeIngestion(input: KnowledgeBaseIngestionInput): Promise<KnowledgeBaseIngestionOutput> {
     const { userId, question, answer } = input;
     try {
-        const db = initializeDb();
-        
         const knowledgeBaseCollection = db.collection('users').doc(userId).collection('knowledge_base');
         await knowledgeBaseCollection.add({
             question,
@@ -74,8 +54,6 @@ interface GetAIResponseInput {
  */
 export async function getAIResponse({ query, userId }: GetAIResponseInput): Promise<IntelligentAIResponseOutput> {
   try {
-    const db = initializeDb();
-    
     // 1. Fetch context (knowledge base) from Firestore
     const knowledgeBaseCollection = db
       .collection('users')
