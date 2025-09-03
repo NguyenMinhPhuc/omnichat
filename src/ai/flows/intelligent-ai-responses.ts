@@ -69,6 +69,8 @@ const intelligentAIResponseFlowInternal = ai.defineFlow(
     outputSchema: IntelligentAIResponseOutputSchema,
   },
   async (input) => {
+    // The context is now passed directly in the input.
+    // There is no need to query the database here.
     const {output} = await leadCaptureAndResponsePrompt(input);
     if (!output) {
       // This provides a more specific error message if the AI model fails to generate output.
