@@ -1,6 +1,8 @@
+
 'use server';
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/googleai';
 import {
   IntelligentAIResponseInput,
   IntelligentAIResponseOutput,
@@ -24,6 +26,9 @@ const leadCaptureAndResponsePrompt = ai.definePrompt({
   },
   output: {
     schema: IntelligentAIResponseOutputSchema
+  },
+  config: {
+      model: googleAI.model('gemini-1.5-flash-latest'),
   },
   prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions based on the provided knowledge base.
 
