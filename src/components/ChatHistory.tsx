@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -51,7 +52,7 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
         <CardDescription>Review past conversations with your chatbot.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-64">
+        <ScrollArea className="h-96">
           {loading ? (
             <p>Loading chat history...</p>
           ) : chatSessions.length === 0 ? (
@@ -65,12 +66,12 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
                       Chat from {format(session.createdAt.toDate(), 'PPP p')}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
+                  <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
                     <DialogHeader>
                       <DialogTitle>Chat Transcript</DialogTitle>
                     </DialogHeader>
-                    <ScrollArea className="h-[60vh] pr-4">
-                      <div className="p-4 space-y-4">
+                    <ScrollArea className="flex-1 pr-4 -mx-6 px-6">
+                      <div className="space-y-4">
                         {session.messages.map((message, index) => (
                           <div key={index} className={cn('flex items-end gap-2', message.sender === 'user' ? 'justify-end' : 'justify-start')}>
                              {message.sender === 'ai' && (

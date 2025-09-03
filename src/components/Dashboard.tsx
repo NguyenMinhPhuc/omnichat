@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, LogOut, Settings, User, ShieldCheck } from 'lucide-react';
+import { Bot, LogOut, Settings, User, ShieldCheck, Code } from 'lucide-react';
 import CustomizationPanel from './CustomizationPanel';
 import ChatbotPreview from './ChatbotPreview';
 import { getAIResponse } from '@/app/actions';
@@ -11,7 +11,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import EmbedGuide from './EmbedGuide';
 import {
   Sidebar,
   SidebarContent,
@@ -58,7 +57,6 @@ export default function Dashboard() {
   
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [knowledgeBase, setKnowledgeBase] = useState<Timestamp | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
@@ -88,9 +86,6 @@ export default function Dashboard() {
           setUserRole(data.role);
           setDisplayName(data.displayName || '');
           setAvatarUrl(data.avatarUrl || null);
-          if (data.knowledgeBaseLastUpdatedAt) {
-            setKnowledgeBase(data.knowledgeBaseLastUpdatedAt);
-          }
         }
       };
       fetchUserData();
@@ -105,8 +100,14 @@ export default function Dashboard() {
     setIsAiTyping(true);
 
     const aiResult = await getAIResponse({ query: text, userId: user.uid });
+    
+    // The AI response can be a string or a structured object.
+    // We'll handle both cases for now.
+    const responseText = typeof aiResult.response === 'string' 
+      ? aiResult.response 
+      : (aiResult.response as any).response;
 
-    const aiMessage: Message = { sender: 'ai', text: aiResult.response };
+    const aiMessage: Message = { sender: 'ai', text: responseText };
     setMessages(prev => [...prev, aiMessage]);
     setIsAiTyping(false);
   };
@@ -134,6 +135,14 @@ export default function Dashboard() {
                 <Link href="/dashboard">
                   <Settings />
                   Configuration
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/embed">
+                  <Code />
+                  Embed
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -198,7 +207,6 @@ export default function Dashboard() {
             <CustomizationPanel
               customization={customization}
               setCustomization={setCustomization}
-              setKnowledgeBase={setKnowledgeBase}
               chatbotId={user.uid}
             />
             <Card>
@@ -209,9 +217,6 @@ export default function Dashboard() {
                 onSendMessage={handleSendMessage}
               />
             </Card>
-          </div>
-          <div>
-              <EmbedGuide chatbotId={user.uid} />
           </div>
         </main>
       </SidebarInset>
