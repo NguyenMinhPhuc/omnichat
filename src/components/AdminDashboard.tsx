@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound, MessageSquare, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound, MessageSquare, CheckCircle, Clock, XCircle, Search } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -81,6 +81,7 @@ export default function AdminDashboard() {
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // State for API Key management dialog
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
@@ -128,7 +129,7 @@ export default function AdminDashboard() {
 
     // We call the async function.
     checkAdminStatusAndFetchData();
-  }, [user, loading]);
+  }, [user, loading, router, toast]);
   
   const fetchUsersAndChatCounts = async () => {
     setIsLoadingUsers(true);
@@ -167,6 +168,16 @@ export default function AdminDashboard() {
       withApiKey: users.filter(u => u.geminiApiKey && u.geminiApiKey.trim() !== '').length,
     }
   }, [users]);
+  
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm) {
+        return users;
+    }
+    return users.filter(user =>
+        (user.displayName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [users, searchTerm]);
 
   const handleRoleChange = async (userId: string, role: 'admin' | 'user') => {
     const userDoc = doc(db, 'users', userId);
@@ -391,9 +402,20 @@ export default function AdminDashboard() {
                 </Card>
             </div>
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Users /> User Management</CardTitle>
-               <CardDescription>View, manage users and their permissions.</CardDescription>
+            <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2"><Users /> User Management</CardTitle>
+                <CardDescription>View, manage users and their permissions.</CardDescription>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search by name or email..."
+                    className="w-full md:w-80 pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -416,11 +438,11 @@ export default function AdminDashboard() {
                             <TableCell><Skeleton className="h-10 w-28" /></TableCell>
                             <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                             <TableCell><Skeleton className="h-6 w-12" /></TableCell>
-                            <TableCell><Skeleton className="h-10 w-24" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-10 w-24 ml-auto" /></TableCell>
                         </TableRow>
                       ))
-                  ) : (
-                    users.map((u) => (
+                  ) : filteredUsers.length > 0 ? (
+                    filteredUsers.map((u) => (
                         <TableRow key={u.id}>
                         <TableCell>
                             <div className="flex items-center gap-3">
@@ -537,6 +559,12 @@ export default function AdminDashboard() {
                         </TableCell>
                         </TableRow>
                     ))
+                  ) : (
+                    <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                            No users found.
+                        </TableCell>
+                    </TableRow>
                   )}
                 </TableBody>
               </Table>
