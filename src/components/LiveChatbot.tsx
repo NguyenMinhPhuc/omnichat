@@ -148,7 +148,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     setMessages(prev => [...prev, aiMessage]);
     await addMessageToChat(currentChatId, aiMessage);
 
-    // After AI response, show the root questions again
+    // After AI response, show the root questions again to guide the user back to a scenario
     setCurrentScriptedQuestions(scenario.filter(item => item.parentId === null));
     setIsAiTyping(false);
   };
@@ -169,7 +169,8 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     }
 
     const nextQuestions = scenario.filter(child => child.parentId === item.id);
-    setCurrentScriptedQuestions(nextQuestions);
+    // If there are follow-up questions, show them. Otherwise, show the root questions.
+    setCurrentScriptedQuestions(nextQuestions.length > 0 ? nextQuestions : scenario.filter(item => item.parentId === null));
   };
   
   const handleSubmit = (e: React.FormEvent) => {
