@@ -25,7 +25,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save } from 'lucide-react';
+import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Textarea } from './ui/textarea';
 
 
 export default function Profile() {
@@ -44,6 +45,7 @@ export default function Profile() {
   const [userRole, setUserRole] = useState<'user' | 'admin' | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [knowledgeBase, setKnowledgeBase] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function Profile() {
             setUserRole(userData.role);
             setDisplayName(userData.displayName || '');
             setAvatarUrl(userData.avatarUrl || null);
+            setKnowledgeBase(userData.knowledgeBase || '');
          }
        });
     }
@@ -68,7 +71,10 @@ export default function Profile() {
     setIsSaving(true);
     try {
         const userDocRef = doc(db, 'users', user.uid);
-        const updateData: any = { displayName };
+        const updateData: any = { 
+            displayName,
+            knowledgeBase
+        };
 
         if (avatarUrl) {
             updateData.avatarUrl = avatarUrl;
@@ -147,6 +153,14 @@ export default function Profile() {
                 <Link href="/dashboard">
                   <Settings />
                   Configuration
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/embed">
+                  <Info />
+                  Embed
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -232,53 +246,78 @@ export default function Profile() {
           </div>
         </header>
         <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-xl mx-auto">
-             <form onSubmit={handleProfileUpdate}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Account Information</CardTitle>
-                    <CardDescription>View and manage your account details.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                     <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <Avatar className="h-24 w-24">
-                                <AvatarImage src={avatarUrl || ''} alt={displayName || ''} />
-                                <AvatarFallback className="text-3xl">
-                                    {displayName?.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
-                             <Label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-secondary text-secondary-foreground rounded-full p-2 cursor-pointer hover:bg-secondary/80">
-                                <Camera className="h-4 w-4" />
-                                <Input id="avatar-upload" type="file" className="hidden" onChange={handleAvatarChange} accept="image/*" />
-                            </Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2">
+                <form onSubmit={handleProfileUpdate}>
+                    <Card>
+                    <CardHeader>
+                        <CardTitle>Account Information</CardTitle>
+                        <CardDescription>View and manage your account details.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <Avatar className="h-24 w-24">
+                                    <AvatarImage src={avatarUrl || ''} alt={displayName || ''} />
+                                    <AvatarFallback className="text-3xl">
+                                        {displayName?.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <Label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-secondary text-secondary-foreground rounded-full p-2 cursor-pointer hover:bg-secondary/80">
+                                    <Camera className="h-4 w-4" />
+                                    <Input id="avatar-upload" type="file" className="hidden" onChange={handleAvatarChange} accept="image/*" />
+                                </Label>
+                            </div>
+                            <div className="space-y-2 flex-1">
+                                <Label htmlFor="displayName">Display Name</Label>
+                                <Input id="displayName" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+                            </div>
                         </div>
-                        <div className="space-y-2 flex-1">
-                            <Label htmlFor="displayName">Display Name</Label>
-                            <Input id="displayName" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+
+                        <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" value={user.email || ''} disabled />
                         </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" value={user.email || ''} disabled />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Change Password</Label>
-                      <CardDescription>
-                        To change your password, click the button below. We will send a password reset link to your email address.
-                      </CardDescription>
-                       <Button type="button" variant="outline" onClick={handlePasswordReset}>Send Password Reset Email</Button>
-                    </div>
-
-                    <Button type="submit" disabled={isSaving}>
-                        <Save className="mr-2 h-4 w-4" />
-                        {isSaving ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </CardContent>
-                </Card>
-            </form>
+                        <div className="space-y-2">
+                            <Label htmlFor="knowledgeBase">About / General Information</Label>
+                            <CardDescription>
+                                Provide some background information for the AI. This can be about you, your company, or any general context you want the chatbot to know.
+                            </CardDescription>
+                            <Textarea 
+                                id="knowledgeBase" 
+                                className="h-32"
+                                value={knowledgeBase}
+                                onChange={(e) => setKnowledgeBase(e.target.value)}
+                                placeholder="e.g., OmniChat is a leading provider of AI chatbot solutions..."
+                            />
+                        </div>
+                        
+                        <Button type="submit" disabled={isSaving}>
+                            <Save className="mr-2 h-4 w-4" />
+                            {isSaving ? "Saving..." : "Save Changes"}
+                        </Button>
+                    </CardContent>
+                    </Card>
+                </form>
+            </div>
+            <div className="md:col-span-1">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Security</CardTitle>
+                        <CardDescription>Manage your security settings.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <Label>Change Password</Label>
+                            <CardDescription>
+                                To change your password, click the button below. We will send a password reset link to your email address.
+                            </CardDescription>
+                        </div>
+                        <Button type="button" variant="outline" onClick={handlePasswordReset}>Send Password Reset Email</Button>
+                    </CardContent>
+                 </Card>
+            </div>
           </div>
         </main>
       </SidebarInset>

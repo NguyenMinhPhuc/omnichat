@@ -40,7 +40,8 @@ export default function Signup() {
           logoUrl: null,
         },
         scenario: [],
-        knowledgeSources: []
+        knowledgeSources: [],
+        knowledgeBase: '', // Initialize empty knowledgeBase
       });
 
       // Sign out the user immediately after signup, as they need to be approved
@@ -109,5 +110,3 @@ export default function Signup() {
     </div>
   );
 }
-
-    

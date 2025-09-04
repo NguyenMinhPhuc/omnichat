@@ -62,6 +62,11 @@ export async function getAIResponse({
         const userData = userDoc.data();
         if (userData) {
           
+          // Add the general knowledgeBase if it exists and is not empty
+          if (userData.knowledgeBase && userData.knowledgeBase.trim() !== '') {
+            knowledgeBaseParts.push("General Information:\n" + userData.knowledgeBase);
+          }
+
           // Add the scenario Q&A if it exists
           if (Array.isArray(userData.scenario) && userData.scenario.length > 0) {
             const scenarioText = userData.scenario
