@@ -2,6 +2,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // This allows the Next.js development server to accept requests from the
+    // Firebase Studio environment.
+    allowedDevOrigins: ["*.cloudworkstations.dev"],
+  },
   async headers() {
     return [
       {
