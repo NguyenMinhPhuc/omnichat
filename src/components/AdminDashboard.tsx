@@ -47,6 +47,16 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 interface UserData {
   id: string;
@@ -55,6 +65,7 @@ interface UserData {
   avatarUrl: string | null;
   role: 'admin' | 'user';
   status: 'active' | 'pending' | 'banned';
+  geminiApiKey?: string;
 }
 
 export default function AdminDashboard() {
@@ -64,6 +75,12 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
   const [displayName, setDisplayName] = useState('');
+
+  // State for API Key management dialog
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [currentUserApiKey, setCurrentUserApiKey] = useState('');
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -132,6 +149,28 @@ export default function AdminDashboard() {
         toast({ title: 'Error', description: error.message, variant: 'destructive'});
     }
   }
+
+  const handleManageApiKey = (userToManage: UserData) => {
+    setSelectedUser(userToManage);
+    setCurrentUserApiKey(userToManage.geminiApiKey || '');
+    setIsApiKeyDialogOpen(true);
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!selectedUser) return;
+    setIsSavingApiKey(true);
+    try {
+        const userDoc = doc(db, 'users', selectedUser.id);
+        await updateDoc(userDoc, { geminiApiKey: currentUserApiKey });
+        setUsers(users.map(u => u.id === selectedUser.id ? { ...u, geminiApiKey: currentUserApiKey } : u));
+        toast({ title: 'Success', description: `API key for ${selectedUser.email} has been updated.` });
+        setIsApiKeyDialogOpen(false);
+    } catch (error: any) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive'});
+    } finally {
+        setIsSavingApiKey(false);
+    }
+  };
 
   if (loading || !user || !userRole) {
     return <div>Loading...</div>;
@@ -248,15 +287,18 @@ export default function AdminDashboard() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Select value={u.role} onValueChange={(value: 'admin' | 'user') => handleRoleChange(u.id, value)} disabled={u.id === user.uid}>
-                          <SelectTrigger className="w-[120px]">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="user">User</SelectItem>
-                          </SelectContent>
-                        </Select>
+                         <div className="flex items-center gap-2">
+                            <Select value={u.role} onValueChange={(value: 'admin' | 'user') => handleRoleChange(u.id, value)} disabled={u.id === user.uid}>
+                            <SelectTrigger className="w-[120px]">
+                                <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="user">User</SelectItem>
+                            </SelectContent>
+                            </Select>
+                            {u.geminiApiKey && <Badge variant="secondary" className="whitespace-nowrap">API Key</Badge>}
+                         </div>
                       </TableCell>
                       <TableCell>
                         <Select value={u.status} onValueChange={(value: 'active' | 'pending' | 'banned') => handleStatusChange(u.id, value)} disabled={u.id === user.uid}>
@@ -272,10 +314,15 @@ export default function AdminDashboard() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                           <Button variant="outline" size="icon" onClick={() => handleManageApiKey(u)}>
+                                <KeyRound className="h-4 w-4" />
+                                <span className="sr-only">Manage API Key</span>
+                            </Button>
+
                            <AlertDialog>
                               <AlertDialogTrigger asChild>
                                   <Button variant="outline" size="icon" disabled={u.id === user.uid}>
-                                      <KeyRound className="h-4 w-4" />
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail-key"><path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="M15.5 22a2.5 2.5 0 0 0 2.5-2.5V17a2.5 2.5 0 0 0-5 0v2.5a2.5 0 0 0 2.5 2.5Z"/><path d="M20 17h2"/></svg>
                                       <span className="sr-only">Reset Password</span>
                                   </Button>
                               </AlertDialogTrigger>
@@ -324,6 +371,40 @@ export default function AdminDashboard() {
           </Card>
         </main>
       </SidebarInset>
+
+      {/* API Key Management Dialog */}
+      <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Manage API Key for {selectedUser?.email}</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-2">
+                <Label htmlFor="api-key-input">Gemini API Key</Label>
+                <Input 
+                    id="api-key-input"
+                    type="password"
+                    value={currentUserApiKey}
+                    onChange={(e) => setCurrentUserApiKey(e.target.value)}
+                    placeholder="Paste user's Gemini API key here"
+                />
+                 <p className="text-xs text-muted-foreground">
+                    Leave blank to delete the key. The change will be saved for this user.
+                </p>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="ghost">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleSaveApiKey} disabled={isSavingApiKey}>
+                    {isSavingApiKey ? "Saving..." : "Save API Key"}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
+
+    
+
+    
