@@ -2,40 +2,44 @@
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { IntelligentAIResponseOutput } from '@/ai/schemas';
-// import { initializeApp, getApps, cert } from 'firebase-admin/app';
-// import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
-// import { serviceAccount } from '@/lib/serviceAccount';
 
-// let db: Firestore;
+let db: Firestore;
+let adminApp: App | null = null;
 
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
  * Ensures that initialization only happens once.
- * THIS IS CURRENTLY DISABLED TO PREVENT RUNTIME ERRORS.
  */
-// function getDb() {
-//   if (getApps().length === 0) {
-//     try {
-//       initializeApp({
-//         credential: cert({
-//             projectId: serviceAccount.project_id,
-//             clientEmail: serviceAccount.client_email,
-//             // Replace escaped newlines with actual newlines
-//             privateKey: serviceAccount.private_key.replace(/\\n/g, '\n'),
-//         }),
-//       });
-//     } catch (error: any) {
-//       console.error('Failed to initialize Firebase Admin SDK:', error.message);
-//       throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
-//     }
-//   }
-//   // Initialize db only after the app has been initialized.
-//   if (!db) {
-//      db = getFirestore();
-//   }
-//   return db;
-// }
+function getDb() {
+  if (!adminApp) {
+    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (!serviceAccountString) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
+    }
+    
+    try {
+      const serviceAccount = JSON.parse(serviceAccountString);
+      if (getApps().length === 0) {
+        adminApp = initializeApp({
+          credential: cert(serviceAccount),
+        });
+      } else {
+        adminApp = getApps()[0];
+      }
+    } catch (error: any) {
+      console.error('Failed to parse or initialize Firebase Admin SDK:', error.message);
+      throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
+    }
+  }
+  
+  if (!db) {
+     db = getFirestore(adminApp);
+  }
+  return db;
+}
 
 
 /**
@@ -50,20 +54,20 @@ export async function getAIResponse({
   userId: string;
 }): Promise<IntelligentAIResponseOutput> {
   try {
-    // const firestore = getDb();
+    const firestore = getDb();
     let context: string[] = [];
 
-    // Firestore integration is temporarily disabled.
-    // if (firestore) {
-    //   const userDocRef = firestore.collection('users').doc(userId);
-    //   const userDoc = await userDocRef.get();
-    //   if (userDoc.exists()) {
-    //     const userData = userDoc.data();
-    //     if (userData && userData.knowledgeBase) {
-    //       context = [userData.knowledgeBase];
-    //     }
-    //   }
-    // }
+    if (firestore) {
+      const userDocRef = firestore.collection('users').doc(userId);
+      const userDoc = await userDocRef.get();
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // This assumes knowledge base is a single string. If it can be an array, adjust accordingly.
+        if (userData && userData.knowledgeBase && typeof userData.knowledgeBase === 'string' && userData.knowledgeBase.trim() !== '') {
+          context = [userData.knowledgeBase];
+        }
+      }
+    }
 
     // Calling the AI flow
     const result = await intelligentAIResponseFlow({
@@ -85,22 +89,17 @@ export async function getAIResponse({
 
 /**
  * Updates the user's chatbot scenario script in Firestore.
- * THIS IS CURRENTLY DISABLED.
  */
 export async function updateScenario(userId: string, scenario: ScenarioItem[]): Promise<{ success: boolean; message: string }> {
-    // const firestore = getDb();
-    // if (!firestore) {
-    //     return { success: false, message: "Database connection not available." };
-    // }
     if (!userId) {
         return { success: false, message: "User ID is required." };
     }
 
     try {
-        // const userDocRef = firestore.collection('users').doc(userId);
-        // await userDocRef.update({ scenario });
-        console.log("Scenario update skipped: Firestore integration is temporarily disabled.");
-        return { success: true, message: "Scenario updated successfully (simulation)." };
+        const firestore = getDb();
+        const userDocRef = firestore.collection('users').doc(userId);
+        await userDocRef.update({ scenario });
+        return { success: true, message: "Scenario updated successfully." };
     } catch (error) {
         console.error("Error updating scenario:", error);
         const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
