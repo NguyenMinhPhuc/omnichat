@@ -6,7 +6,6 @@ import { Textarea } from '@/components/ui/textarea';
 import MarkdownToolbar from './MarkdownToolbar';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
-import { Card } from './ui/card';
 
 interface MarkdownEditorProps {
   value: string;
@@ -46,11 +45,11 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         </div>
       </TabsContent>
       <TabsContent value="preview">
-        <Card className={`prose dark:prose-invert min-h-[240px] p-4 border rounded-md overflow-auto ${textareaHeightClass}`}>
+        <div className={`prose dark:prose-invert min-h-[240px] p-4 border rounded-md overflow-auto ${textareaHeightClass}`}>
             <ReactMarkdown rehypePlugins={[rehypeRaw]}>
                 {value || "*Preview will be shown here...*"}
             </ReactMarkdown>
-        </Card>
+        </div>
       </TabsContent>
     </Tabs>
   );
