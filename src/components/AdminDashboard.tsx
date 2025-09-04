@@ -90,7 +90,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const checkAdminStatusAndFetchData = async () => {
-      if (loading) return; // Wait until auth state is resolved
+      if (loading) return; 
 
       if (!user) {
         router.push('/');
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
     };
 
     checkAdminStatusAndFetchData();
-  }, [user, loading, router]);
+  }, [user, loading, router, toast]);
   
   const fetchUsersAndChatCounts = async () => {
     setIsLoadingUsers(true);
