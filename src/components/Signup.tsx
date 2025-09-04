@@ -39,7 +39,8 @@ export default function Signup() {
           accentColor: '#6495ED',
           logoUrl: null,
         },
-        knowledgeBase: ''
+        scenario: [],
+        knowledgeSources: []
       });
 
       // Sign out the user immediately after signup, as they need to be approved
@@ -86,7 +87,7 @@ export default function Signup() {
               />
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Password</Label>              
               <Input
                 id="password"
                 type="password"
@@ -108,3 +109,5 @@ export default function Signup() {
     </div>
   );
 }
+
+    

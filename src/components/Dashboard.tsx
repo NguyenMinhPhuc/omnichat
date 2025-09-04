@@ -51,6 +51,12 @@ export interface ScenarioItem {
     parentId: string | null;
 }
 
+export interface KnowledgeSource {
+    id: string;
+    title: string;
+    content: string;
+}
+
 export default function Dashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -63,7 +69,7 @@ export default function Dashboard() {
   });
 
   const [scenario, setScenario] = useState<ScenarioItem[]>([]);
-  const [knowledgeBase, setKnowledgeBase] = useState('');
+  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
   
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -96,8 +102,8 @@ export default function Dashboard() {
           if (data.scenario) {
             setScenario(data.scenario);
           }
-          if (data.knowledgeBase) {
-            setKnowledgeBase(data.knowledgeBase);
+          if (data.knowledgeSources) {
+            setKnowledgeSources(data.knowledgeSources);
           }
           setUserRole(data.role);
           setDisplayName(data.displayName || '');
@@ -221,8 +227,8 @@ export default function Dashboard() {
               setCustomization={setCustomization}
               scenario={scenario}
               setScenario={setScenario}
-              knowledgeBase={knowledgeBase}
-              setKnowledgeBase={setKnowledgeBase}
+              knowledgeSources={knowledgeSources}
+              setKnowledgeSources={setKnowledgeSources}
               chatbotId={user.uid}
             />
             <Card>
@@ -240,3 +246,5 @@ export default function Dashboard() {
     </SidebarProvider>
   );
 }
+
+    
