@@ -2,7 +2,7 @@
 'use server';
 
 import {ai} from '@/ai/genkit';
-import {googleAI, GoogleAIGeminiModel} from '@genkit-ai/googleai';
+import {googleAI, gemini15Flash, gemini15Pro} from '@genkit-ai/googleai';
 import {
   IntelligentAIResponseInput,
   IntelligentAIResponseOutput,
@@ -71,7 +71,7 @@ const intelligentAIResponseFlowInternal = ai.defineFlow(
         name: 'leadCaptureAndResponsePrompt_dynamic', // Use a unique name to avoid conflicts
         input: { schema: IntelligentAIResponseInputSchema },
         output: { schema: IntelligentAIResponseOutputSchema },
-        model: model as GoogleAIGeminiModel, // Cast to the correct type
+        model: model, // Use the model instance directly
         prompt: basePrompt,
       },
     );
