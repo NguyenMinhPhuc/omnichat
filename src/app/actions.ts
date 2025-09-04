@@ -3,7 +3,7 @@
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { IntelligentAIResponseOutput } from '@/ai/schemas';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { firebaseConfig } from '@/lib/firebaseConfig';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
 
@@ -12,23 +12,35 @@ interface GetAIResponseInput {
   userId: string;
 }
 
-// Initialize Firebase Admin SDK
-try {
-  if (!getApps().length) {
-    const serviceAccount = {
-      projectId: firebaseConfig.projectId,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-    };
-    initializeApp({
-      credential: cert(serviceAccount),
-    });
+let db: Firestore;
+
+/**
+ * Initializes Firebase Admin SDK and returns a Firestore instance.
+ * Ensures that initialization only happens once.
+ */
+function getDb() {
+  if (!db) {
+    try {
+      if (!getApps().length) {
+        const serviceAccount = {
+          projectId: firebaseConfig.projectId,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
+          privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+        };
+        initializeApp({
+          credential: cert(serviceAccount),
+        });
+      }
+      db = getFirestore();
+    } catch (error: any) {
+      console.error('Failed to initialize Firebase Admin SDK:', error.message);
+      // Re-throw or handle the error as appropriate for your application
+      throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
+    }
   }
-} catch (error: any) {
-  console.error('Failed to initialize Firebase Admin SDK:', error.message);
+  return db;
 }
 
-const db = getFirestore();
 
 /**
  * Fetches an AI response using the Genkit flow.
@@ -39,11 +51,12 @@ export async function getAIResponse({
   userId,
 }: GetAIResponseInput): Promise<IntelligentAIResponseOutput> {
   try {
+    const firestore = getDb();
     let context: string[] = [];
 
     // Attempt to fetch user's knowledge base if DB is available
-    if (db) {
-      const userDocRef = db.collection('users').doc(userId);
+    if (firestore) {
+      const userDocRef = firestore.collection('users').doc(userId);
       const userDoc = await userDocRef.get();
       if (userDoc.exists) {
         const userData = userDoc.data();
@@ -75,7 +88,8 @@ export async function getAIResponse({
  * Updates the user's chatbot scenario script in Firestore.
  */
 export async function updateScenario(userId: string, scenario: ScenarioItem[]): Promise<{ success: boolean; message: string }> {
-    if (!db) {
+    const firestore = getDb();
+    if (!firestore) {
         return { success: false, message: "Database connection not available." };
     }
     if (!userId) {
@@ -83,7 +97,7 @@ export async function updateScenario(userId: string, scenario: ScenarioItem[]): 
     }
 
     try {
-        const userDocRef = db.collection('users').doc(userId);
+        const userDocRef = firestore.collection('users').doc(userId);
         await userDocRef.update({ scenario });
         return { success: true, message: "Scenario updated successfully." };
     } catch (error) {
