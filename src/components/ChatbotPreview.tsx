@@ -13,6 +13,7 @@ import type { CustomizationState, ScenarioItem } from './Dashboard';
 import Logo from './Logo';
 import { Badge } from './ui/badge';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 
 export interface Message {
   sender: 'user' | 'ai';
@@ -119,7 +120,7 @@ export default function ChatbotPreview({
                       : 'bg-card text-card-foreground rounded-bl-none'
                   )}
                 >
-                  <ReactMarkdown>{message.text}</ReactMarkdown>
+                  <ReactMarkdown rehypePlugins={[rehypeRaw]}>{message.text}</ReactMarkdown>
                 </div>
                  {message.sender === 'user' && (
                   <Avatar className="h-8 w-8">

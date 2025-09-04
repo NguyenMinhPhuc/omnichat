@@ -15,6 +15,7 @@ import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, arrayUnion
 import { db } from '@/lib/firebase';
 import { Badge } from './ui/badge';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -171,7 +172,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
 
     const nextQuestions = scenario.filter(child => child.parentId === item.id);
     // If there are follow-up questions, show them. Otherwise, show the root questions.
-    setCurrentScriptedQuestions(nextQuestions);
+    setCurrentScriptedQuestions(nextQuestions.length > 0 ? nextQuestions : scenario.filter(item => item.parentId === null));
   };
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -228,7 +229,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                           : 'bg-card text-card-foreground rounded-bl-none'
                       )}
                     >
-                      <ReactMarkdown>{message.text}</ReactMarkdown>
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>{message.text}</ReactMarkdown>
                     </div>
                      {message.sender === 'user' && (
                       <Avatar className="h-8 w-8">
