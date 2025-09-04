@@ -94,13 +94,13 @@ export default function AdminDashboard() {
     } else if (user) {
       const userDocRef = doc(db, 'users', user.uid);
       getDoc(userDocRef).then(userDoc => {
-         if (!userDoc.exists() || userDoc.data().role !== 'admin') {
-             router.push('/dashboard');
-         } else {
+         if (userDoc.exists() && userDoc.data().role === 'admin') {
             const userData = userDoc.data();
             setUserRole(userData.role);
             setDisplayName(userData.displayName || '');
             fetchUsersAndChatCounts();
+         } else {
+            router.push('/dashboard');
          }
       });
     }
