@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound, MessageSquare } from 'lucide-react';
+import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound, MessageSquare, CheckCircle, Clock, XCircle } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
 
     // We call the async function.
     checkAdminStatusAndFetchData();
-  }, [user, loading]); // Depend only on user and loading state changes.
+  }, [user, loading, router, toast]);
   
   const fetchUsersAndChatCounts = async () => {
     setIsLoadingUsers(true);
@@ -156,6 +156,18 @@ export default function AdminDashboard() {
     }
   };
   
+  const stats = useMemo(() => {
+    return {
+      total: users.length,
+      admins: users.filter(u => u.role === 'admin').length,
+      users: users.filter(u => u.role === 'user').length,
+      active: users.filter(u => u.status === 'active').length,
+      pending: users.filter(u => u.status === 'pending').length,
+      banned: users.filter(u => u.status === 'banned').length,
+      withApiKey: users.filter(u => u.geminiApiKey && u.geminiApiKey.trim() !== '').length,
+    }
+  }, [users]);
+
   const handleRoleChange = async (userId: string, role: 'admin' | 'user') => {
     const userDoc = doc(db, 'users', userId);
     await updateDoc(userDoc, { role });
@@ -313,21 +325,68 @@ export default function AdminDashboard() {
           </div>
         </header>
         <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        {isLoadingUsers ? (
-                            <Skeleton className="h-8 w-1/4" />
-                        ) : (
-                            <div className="text-2xl font-bold">{users.length}</div>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                            All registered users in the system
-                        </p>
+                        {isLoadingUsers ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.total}</div>}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Admins</CardTitle>
+                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingUsers ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.admins}</div>}
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Users</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingUsers ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.users}</div>}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active</CardTitle>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingUsers ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.active}</div>}
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                        <Clock className="h-4 w-4 text-yellow-500" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingUsers ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.pending}</div>}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Banned</CardTitle>
+                        <XCircle className="h-4 w-4 text-red-500" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingUsers ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.banned}</div>}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">With API Key</CardTitle>
+                        <KeyRound className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingUsers ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.withApiKey}</div>}
                     </CardContent>
                 </Card>
             </div>
