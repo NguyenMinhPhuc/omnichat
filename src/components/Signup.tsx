@@ -34,6 +34,7 @@ export default function Signup() {
         status: 'pending', // Default status is now pending
         avatarUrl: null,
         geminiApiKey: '', // Initialize empty geminiApiKey
+        canManageApiKey: false, // Default permission to false
         customization: {
           primaryColor: '#29ABE2',
           backgroundColor: '#F0F8FF',

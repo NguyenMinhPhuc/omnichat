@@ -49,6 +49,7 @@ export default function Profile() {
   const [knowledgeBase, setKnowledgeBase] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [canManageApiKey, setCanManageApiKey] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -63,6 +64,7 @@ export default function Profile() {
             setAvatarUrl(userData.avatarUrl || null);
             setKnowledgeBase(userData.knowledgeBase || '');
             setGeminiApiKey(userData.geminiApiKey || '');
+            setCanManageApiKey(userData.canManageApiKey || false);
          }
        });
     }
@@ -77,8 +79,11 @@ export default function Profile() {
         const updateData: any = { 
             displayName,
             knowledgeBase,
-            geminiApiKey,
         };
+        
+        if (canManageApiKey) {
+            updateData.geminiApiKey = geminiApiKey;
+        }
 
         if (avatarUrl) {
             updateData.avatarUrl = avatarUrl;
@@ -299,25 +304,27 @@ export default function Profile() {
                       </div>
                   </CardContent>
                   </Card>
-                  <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><KeyRound /> Gemini API Key</CardTitle>
-                        <CardDescription>Provide your own Google AI Gemini API key to be used for your chatbot.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <Label htmlFor="gemini-api-key">Your API Key</Label>
-                            <Input id="gemini-api-key" type="password" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} placeholder="Enter your Gemini API key" />
-                             <Alert>
-                                <Info className="h-4 w-4" />
-                                <AlertTitle>Where to find your API key?</AlertTitle>
-                                <AlertDescription>
-                                    You can create and find your API key in the <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="font-semibold underline">Google AI Studio</a>. Your key is kept private and secure.
-                                </AlertDescription>
-                            </Alert>
-                        </div>
-                    </CardContent>
-                  </Card>
+                  {canManageApiKey && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><KeyRound /> Gemini API Key</CardTitle>
+                            <CardDescription>Provide your own Google AI Gemini API key to be used for your chatbot.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2">
+                                <Label htmlFor="gemini-api-key">Your API Key</Label>
+                                <Input id="gemini-api-key" type="password" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} placeholder="Enter your Gemini API key" />
+                                <Alert>
+                                    <Info className="h-4 w-4" />
+                                    <AlertTitle>Where to find your API key?</AlertTitle>
+                                    <AlertDescription>
+                                        You can create and find your API key in the <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="font-semibold underline">Google AI Studio</a>. Your key is kept private and secure.
+                                    </AlertDescription>
+                                </Alert>
+                            </div>
+                        </CardContent>
+                    </Card>
+                  )}
               </div>
               <div className="md:col-span-1 space-y-8">
                    <Card>

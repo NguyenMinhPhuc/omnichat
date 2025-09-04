@@ -57,6 +57,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Switch } from './ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface UserData {
   id: string;
@@ -66,6 +68,7 @@ interface UserData {
   role: 'admin' | 'user';
   status: 'active' | 'pending' | 'banned';
   geminiApiKey?: string;
+  canManageApiKey?: boolean;
 }
 
 export default function AdminDashboard() {
@@ -172,11 +175,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const handlePermissionChange = async (userId: string, checked: boolean) => {
+    try {
+        const userDoc = doc(db, 'users', userId);
+        await updateDoc(userDoc, { canManageApiKey: checked });
+        setUsers(users.map(u => u.id === userId ? { ...u, canManageApiKey: checked } : u));
+        toast({ title: 'Success', description: 'Permission updated successfully.' });
+    } catch (error: any) {
+        toast({ title: 'Error updating permission', description: error.message, variant: 'destructive' });
+    }
+  };
+
   if (loading || !user || !userRole) {
     return <div>Loading...</div>;
   }
 
   return (
+    <TooltipProvider>
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
@@ -268,6 +283,7 @@ export default function AdminDashboard() {
                     <TableHead>User</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Permissions</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -311,6 +327,24 @@ export default function AdminDashboard() {
                              <SelectItem value="banned"><Badge variant="destructive">Banned</Badge></SelectItem>
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className='flex items-center space-x-2'>
+                                    <Switch
+                                        id={`api-key-permission-${u.id}`}
+                                        checked={u.canManageApiKey}
+                                        onCheckedChange={(checked) => handlePermissionChange(u.id, checked)}
+                                        disabled={u.id === user.uid}
+                                    />
+                                    <Label htmlFor={`api-key-permission-${u.id}`} className="text-sm text-muted-foreground">API Key</Label>
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Allow user to add/edit their own Gemini API Key.</p>
+                            </TooltipContent>
+                        </Tooltip>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -402,9 +436,6 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
     </SidebarProvider>
+    </TooltipProvider>
   );
 }
-
-    
-
-    
