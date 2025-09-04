@@ -17,7 +17,12 @@ function getDb() {
   if (getApps().length === 0) {
     try {
       initializeApp({
-        credential: cert(serviceAccount),
+        credential: cert({
+            projectId: serviceAccount.project_id,
+            clientEmail: serviceAccount.client_email,
+            // Replace escaped newlines with actual newlines
+            privateKey: serviceAccount.private_key.replace(/\\n/g, '\n'),
+        }),
       });
     } catch (error: any) {
       console.error('Failed to initialize Firebase Admin SDK:', error.message);
