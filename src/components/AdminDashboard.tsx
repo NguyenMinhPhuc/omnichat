@@ -89,9 +89,14 @@ export default function AdminDashboard() {
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 
   useEffect(() => {
+    // This function will be executed by useEffect.
     const checkAdminStatusAndFetchData = async () => {
-      if (loading) return; 
-
+      // If auth is still loading, wait.
+      if (loading) {
+        return;
+      }
+      
+      // If no user is logged in, redirect to login page.
       if (!user) {
         router.push('/');
         return;
@@ -100,26 +105,30 @@ export default function AdminDashboard() {
       try {
         const userDocRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists() && userDoc.data()?.role === 'admin') {
+        
+        // Check if the user document exists and if the role is 'admin'.
+        if (userDoc.exists() && userDoc.data().role === 'admin') {
           const userData = userDoc.data();
           setUserRole(userData.role);
           setDisplayName(userData.displayName || '');
-          // Only admins should fetch all users
-          fetchUsersAndChatCounts();
+          
+          // Only if the user is confirmed as an admin, fetch all other users.
+          await fetchUsersAndChatCounts();
         } else {
-          // If user doc doesn't exist or role is not admin, redirect
+          // If the user is not an admin or their document doesn't exist, redirect them.
           router.push('/dashboard');
         }
       } catch (error) {
         console.error("Error checking admin status:", error);
         toast({ title: 'Error', description: 'Failed to verify user role.', variant: 'destructive' });
-        router.push('/'); // Redirect on error as well
+        // On error, redirect to a safe page.
+        router.push('/');
       }
     };
 
+    // We call the async function.
     checkAdminStatusAndFetchData();
-  }, [user, loading, router, toast]);
+  }, [user, loading]); // Depend only on user and loading state changes.
   
   const fetchUsersAndChatCounts = async () => {
     setIsLoadingUsers(true);
@@ -426,7 +435,7 @@ export default function AdminDashboard() {
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="outline" size="icon" disabled={u.id === user.uid}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail-key"><path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="M15.5 22a2.5 2.5 0 0 0 2.5-2.5V17a2.5 2.5 0 0 0-5 0v2.5a2.5 2.5 0 0 0 2.5 2.5Z"/><path d="M20 17h2"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail-key"><path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="M15.5 22a2.5 2.5 0 0 0 2.5-2.5V17a2.5 2.5 0 0 0-5 0v2.5a2.5 0 0 0 2.5 2.5Z"/><path d="M20 17h2"/></svg>
                                         <span className="sr-only">Reset Password</span>
                                     </Button>
                                 </AlertDialogTrigger>
@@ -510,3 +519,5 @@ export default function AdminDashboard() {
     </TooltipProvider>
   );
 }
+
+    
