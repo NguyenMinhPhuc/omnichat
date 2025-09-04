@@ -222,6 +222,7 @@ export default function Dashboard() {
             <Card>
               <ChatbotPreview
                 customization={customization}
+                scenario={scenario}
                 messages={messages}
                 isAiTyping={isAiTyping}
                 onSendMessage={handleSendMessage}

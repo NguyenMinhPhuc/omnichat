@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { MessageSquare, X, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
+import LiveChatbot from './LiveChatbot';
 
 export default function FloatingChatbot() {
   const { user } = useAuth();
@@ -13,16 +15,12 @@ export default function FloatingChatbot() {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // Ensure this component only renders on the client-side
-    // to prevent hydration mismatches with window/document access.
     setIsClient(true);
   }, []);
 
   if (!isClient || !user) {
     return null;
   }
-
-  const chatbotUrl = `/chatbot/${user.uid}`;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -31,7 +29,7 @@ export default function FloatingChatbot() {
         isOpen ? 'w-[400px] h-[600px] opacity-100' : 'w-0 h-0 opacity-0'
       )}>
         {isOpen && (
-            <Card className="h-full w-full flex flex-col shadow-2xl">
+            <Card className="h-full w-full flex flex-col shadow-2xl overflow-hidden rounded-lg">
                  <CardHeader className="flex flex-row items-center justify-between p-4 border-b bg-primary text-primary-foreground">
                     <div className="flex items-center gap-2">
                         <Bot className="h-6 w-6" />
@@ -43,7 +41,7 @@ export default function FloatingChatbot() {
                 </CardHeader>
                 <CardContent className="flex-1 p-0">
                    <iframe
-                        src={chatbotUrl}
+                        src={`/chatbot/${user.uid}`}
                         className="w-full h-full border-0"
                         title="Chatbot"
                         sandbox="allow-scripts allow-same-origin allow-forms"

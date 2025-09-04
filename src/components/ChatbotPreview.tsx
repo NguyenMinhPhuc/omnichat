@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -8,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { CustomizationState } from './Dashboard';
+import type { CustomizationState, ScenarioItem } from './Dashboard';
 import Logo from './Logo';
+import { Badge } from './ui/badge';
 
 export interface Message {
   sender: 'user' | 'ai';
@@ -18,6 +20,7 @@ export interface Message {
 
 interface ChatbotPreviewProps {
   customization: CustomizationState;
+  scenario: ScenarioItem[];
   messages: Message[];
   isAiTyping: boolean;
   onSendMessage: (text: string) => void;
@@ -25,27 +28,56 @@ interface ChatbotPreviewProps {
 
 export default function ChatbotPreview({
   customization,
+  scenario,
   messages,
   isAiTyping,
   onSendMessage,
 }: ChatbotPreviewProps) {
   const [inputValue, setInputValue] = useState('');
+  const [currentScriptedQuestions, setCurrentScriptedQuestions] = useState<ScenarioItem[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Initialize with root questions
+    setCurrentScriptedQuestions(scenario.filter(item => item.parentId === null));
+  }, [scenario]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [messages, isAiTyping]);
+  }, [messages, isAiTyping, currentScriptedQuestions]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
+  };
+
+  const handleScriptedMessage = (item: ScenarioItem) => {
+    // Simulate scripted interaction for preview
+    const userMessage: Message = { sender: 'user', text: item.question };
+    const aiMessage: Message = { sender: 'ai', text: item.answer };
+
+    // This part is tricky in preview. We'll just add to local messages.
+    // The parent Dashboard component handles the real AI call.
+    // To make preview work well, we can call a modified onSendMessage.
+    // For now, let's just update the script questions.
+    const nextQuestions = scenario.filter(child => child.parentId === item.id);
+    setCurrentScriptedQuestions(nextQuestions);
+    
+    // Fake the message exchange for preview
+    // In a real scenario, the parent would handle this.
+    // For preview, let's assume `onSendMessage` just adds the message.
+    onSendMessage(userMessage.text);
+    // And somehow we get an AI message back...
+    // This is a limitation of the preview component's design.
+    // A better approach would be for the parent to manage messages entirely.
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
     onSendMessage(inputValue);
+    setCurrentScriptedQuestions([]); // Hide suggestions on free text
     setInputValue('');
   };
 
@@ -112,6 +144,22 @@ export default function ChatbotPreview({
                 </div>
             )}
           </div>
+           {!isAiTyping && currentScriptedQuestions.length > 0 && (
+                <div className="p-4 pt-0 flex flex-wrap gap-2 justify-start">
+                    {currentScriptedQuestions.map(item => (
+                        <Badge 
+                            key={item.id} 
+                            variant="outline" 
+                            className="cursor-pointer hover:bg-accent"
+                            // In preview, this click won't trigger a real AI response.
+                            // It will just show the next set of questions if any.
+                            onClick={() => handleScriptedMessage(item)}
+                        >
+                            {item.question}
+                        </Badge>
+                    ))}
+                </div>
+            )}
         </ScrollArea>
       </CardContent>
       <CardFooter className="p-4 border-t bg-background">
