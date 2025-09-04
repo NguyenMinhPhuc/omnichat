@@ -1,8 +1,8 @@
 
 'use client';
 
-import React from 'react';
-import { Palette, History, MessageCircleQuestion } from 'lucide-react';
+import React, { useState } from 'react';
+import { Palette, History, MessageCircleQuestion, Database, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,11 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
 import ScenarioEditor from './ScenarioEditor';
+import { Textarea } from './ui/textarea';
+import { Button } from './ui/button';
+import { updateKnowledgeBase } from '@/app/actions';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
 interface CustomizationPanelProps {
@@ -20,6 +25,8 @@ interface CustomizationPanelProps {
   setCustomization: React.Dispatch<React.SetStateAction<CustomizationState>>;
   scenario: ScenarioItem[];
   setScenario: React.Dispatch<React.SetStateAction<ScenarioItem[]>>;
+  knowledgeBase: string;
+  setKnowledgeBase: React.Dispatch<React.SetStateAction<string>>;
   chatbotId: string;
 }
 
@@ -28,9 +35,18 @@ export default function CustomizationPanel({
   setCustomization,
   scenario,
   setScenario,
+  knowledgeBase,
+  setKnowledgeBase,
   chatbotId,
 }: CustomizationPanelProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [localKnowledgeBase, setLocalKnowledgeBase] = useState(knowledgeBase);
+  const [isSaving, setIsSaving] = useState(false);
+
+  React.useEffect(() => {
+    setLocalKnowledgeBase(knowledgeBase);
+  }, [knowledgeBase]);
 
   const updateFirestoreCustomization = async (data: any) => {
     if (!user) return;
@@ -58,18 +74,35 @@ export default function CustomizationPanel({
     }
   };
 
+  const handleSaveKnowledgeBase = async () => {
+    if (!user) {
+        toast({ title: "Error", description: "You must be logged in to save.", variant: "destructive"});
+        return;
+    }
+    setIsSaving(true);
+    const result = await updateKnowledgeBase(user.uid, localKnowledgeBase);
+    if(result.success) {
+        setKnowledgeBase(localKnowledgeBase);
+        toast({ title: "Success", description: "Knowledge base saved successfully." });
+    } else {
+        toast({ title: "Error", description: result.message, variant: "destructive"});
+    }
+    setIsSaving(false);
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Chatbot Configuration</CardTitle>
-        <CardDescription>Customize the look, behavior, and view chat history.</CardDescription>
+        <CardDescription>Customize the look, behavior, and knowledge of your chatbot.</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="appearance">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="appearance"><Palette className="mr-2 h-4 w-4" /> Appearance</TabsTrigger>
             <TabsTrigger value="scenario"><MessageCircleQuestion className="mr-2 h-4 w-4" /> Scenario</TabsTrigger>
-            <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> Chat History</TabsTrigger>
+            <TabsTrigger value="knowledge"><Database className="mr-2 h-4 w-4" /> Knowledge</TabsTrigger>
+            <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> History</TabsTrigger>
           </TabsList>
           <TabsContent value="appearance" className="pt-4">
             <div className="space-y-4">
@@ -96,7 +129,28 @@ export default function CustomizationPanel({
           <TabsContent value="scenario" className="pt-4">
             <ScenarioEditor initialScenario={scenario} setScenario={setScenario} />
           </TabsContent>
-           <TabsContent value="history" className="pt-4">
+          <TabsContent value="knowledge" className="pt-4 space-y-4">
+              <Alert>
+                <Database className="h-4 w-4" />
+                <AlertTitle>General Knowledge Base</AlertTitle>
+                <AlertDescription>
+                    Provide any general information, context, or data you want the AI to know. This will be used to answer questions that are not covered by the scripted scenario.
+                </AlertDescription>
+              </Alert>
+              <Textarea 
+                placeholder="Enter company information, product details, FAQs, etc."
+                className="h-64"
+                value={localKnowledgeBase}
+                onChange={(e) => setLocalKnowledgeBase(e.target.value)}
+              />
+              <div className="flex justify-end">
+                <Button onClick={handleSaveKnowledgeBase} disabled={isSaving}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {isSaving ? "Saving..." : "Save Knowledge Base"}
+                </Button>
+              </div>
+          </TabsContent>
+          <TabsContent value="history" className="pt-4">
             <ChatHistory chatbotId={chatbotId} />
           </TabsContent>
         </Tabs>

@@ -63,6 +63,7 @@ export default function Dashboard() {
   });
 
   const [scenario, setScenario] = useState<ScenarioItem[]>([]);
+  const [knowledgeBase, setKnowledgeBase] = useState('');
   
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -94,6 +95,9 @@ export default function Dashboard() {
           }
           if (data.scenario) {
             setScenario(data.scenario);
+          }
+          if (data.knowledgeBase) {
+            setKnowledgeBase(data.knowledgeBase);
           }
           setUserRole(data.role);
           setDisplayName(data.displayName || '');
@@ -217,6 +221,8 @@ export default function Dashboard() {
               setCustomization={setCustomization}
               scenario={scenario}
               setScenario={setScenario}
+              knowledgeBase={knowledgeBase}
+              setKnowledgeBase={setKnowledgeBase}
               chatbotId={user.uid}
             />
             <Card>

@@ -113,3 +113,24 @@ export async function updateScenario(userId: string, scenario: ScenarioItem[]): 
         return { success: false, message: `Failed to update scenario: ${errorMessage}` };
     }
 }
+
+
+/**
+ * Updates the user's knowledge base in Firestore.
+ */
+export async function updateKnowledgeBase(userId: string, knowledgeBase: string): Promise<{ success: boolean; message: string }> {
+    if (!userId) {
+        return { success: false, message: "User ID is required." };
+    }
+
+    try {
+        const firestore = getDb();
+        const userDocRef = firestore.collection('users').doc(userId);
+        await userDocRef.update({ knowledgeBase });
+        return { success: true, message: "Knowledge base updated successfully." };
+    } catch (error) {
+        console.error("Error updating knowledge base:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+        return { success: false, message: `Failed to update knowledge base: ${errorMessage}` };
+    }
+}
