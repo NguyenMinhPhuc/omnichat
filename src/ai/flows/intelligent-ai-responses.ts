@@ -27,12 +27,8 @@ const leadCaptureAndResponsePrompt = ai.definePrompt({
 
 Here is the knowledge base you should use as your primary source of information:
 <knowledge_base>
-{{#if context}}
-{{#each context}}
----
-{{{this}}}
----
-{{/each}}
+{{#if knowledgeBase}}
+{{{knowledgeBase}}}
 {{else}}
 There is no information in the knowledge base. You must rely on your general knowledge.
 {{/if}}

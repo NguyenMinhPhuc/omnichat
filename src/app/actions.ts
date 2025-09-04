@@ -50,7 +50,7 @@ export async function getAIResponse({
 }): Promise<IntelligentAIResponseOutput> {
   try {
     const firestore = getDb();
-    let context: string[] = [];
+    let knowledgeBase: string | undefined = undefined;
 
     if (firestore) {
       const userDocRef = firestore.collection('users').doc(userId);
@@ -58,7 +58,7 @@ export async function getAIResponse({
       if (userDoc.exists) {
         const userData = userDoc.data();
         if (userData && userData.knowledgeBase && typeof userData.knowledgeBase === 'string' && userData.knowledgeBase.trim() !== '') {
-          context = [userData.knowledgeBase];
+          knowledgeBase = userData.knowledgeBase;
         }
       }
     }
@@ -66,7 +66,7 @@ export async function getAIResponse({
     const result = await intelligentAIResponseFlow({
       query,
       userId,
-      context,
+      knowledgeBase,
     });
 
     return result;
