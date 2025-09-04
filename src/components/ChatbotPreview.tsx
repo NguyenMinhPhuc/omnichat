@@ -113,9 +113,9 @@ export default function ChatbotPreview({
                 )}
                 <div
                   className={cn(
-                    'max-w-xs md:max-w-md lg:max-w-lg rounded-xl px-4 py-2 text-sm shadow prose',
+                    'max-w-xs md:max-w-md lg:max-w-lg rounded-xl px-4 py-2 text-sm shadow',
                     message.sender === 'user'
-                      ? 'bg-[--chat-primary-color] text-primary-foreground rounded-br-none prose-invert'
+                      ? 'bg-[--chat-primary-color] text-primary-foreground rounded-br-none'
                       : 'bg-card text-card-foreground rounded-bl-none'
                   )}
                 >
