@@ -56,7 +56,7 @@ export async function getAIResponse({
     if (firestore) {
       const userDocRef = firestore.collection('users').doc(userId);
       const userDoc = await userDocRef.get();
-      if (userDoc.exists) {
+      if (userDoc.exists()) {
         const userData = userDoc.data();
         if (userData && userData.knowledgeBase) {
           context = [userData.knowledgeBase];
