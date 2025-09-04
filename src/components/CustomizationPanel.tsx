@@ -2,31 +2,37 @@
 'use client';
 
 import React from 'react';
-import { Palette, History } from 'lucide-react';
+import { Palette, History, MessageCircleQuestion } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { CustomizationState } from './Dashboard';
+import type { CustomizationState, ScenarioItem } from './Dashboard';
 import { useAuth } from '@/context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
+import ScenarioEditor from './ScenarioEditor';
+
 
 interface CustomizationPanelProps {
   customization: CustomizationState;
   setCustomization: React.Dispatch<React.SetStateAction<CustomizationState>>;
+  scenario: ScenarioItem[];
+  setScenario: React.Dispatch<React.SetStateAction<ScenarioItem[]>>;
   chatbotId: string;
 }
 
 export default function CustomizationPanel({
   customization,
   setCustomization,
+  scenario,
+  setScenario,
   chatbotId,
 }: CustomizationPanelProps) {
   const { user } = useAuth();
 
-  const updateFirestore = async (data: any) => {
+  const updateFirestoreCustomization = async (data: any) => {
     if (!user) return;
     const userDocRef = doc(db, 'users', user.uid);
     await setDoc(userDocRef, data, { merge: true });
@@ -35,7 +41,7 @@ export default function CustomizationPanel({
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newCustomization = { ...customization, [e.target.name]: e.target.value };
     setCustomization(newCustomization);
-    updateFirestore({ customization: newCustomization });
+    updateFirestoreCustomization({ customization: newCustomization });
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,7 +52,7 @@ export default function CustomizationPanel({
         const logoUrl = reader.result as string;
         const newCustomization = { ...customization, logoUrl };
         setCustomization(newCustomization);
-        updateFirestore({ customization: newCustomization });
+        updateFirestoreCustomization({ customization: newCustomization });
       };
       reader.readAsDataURL(logoFile);
     }
@@ -56,12 +62,13 @@ export default function CustomizationPanel({
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Chatbot Configuration</CardTitle>
-        <CardDescription>Customize the look and view chat history.</CardDescription>
+        <CardDescription>Customize the look, behavior, and view chat history.</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="appearance">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="appearance"><Palette className="mr-2 h-4 w-4" /> Appearance</TabsTrigger>
+            <TabsTrigger value="scenario"><MessageCircleQuestion className="mr-2 h-4 w-4" /> Scenario</TabsTrigger>
             <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> Chat History</TabsTrigger>
           </TabsList>
           <TabsContent value="appearance" className="pt-4">
@@ -85,6 +92,9 @@ export default function CustomizationPanel({
                 <Input id="logo" type="file" onChange={handleLogoChange} accept="image/*" />
               </div>
             </div>
+          </TabsContent>
+          <TabsContent value="scenario" className="pt-4">
+            <ScenarioEditor initialScenario={scenario} setScenario={setScenario} />
           </TabsContent>
            <TabsContent value="history" className="pt-4">
             <ChatHistory chatbotId={chatbotId} />

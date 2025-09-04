@@ -44,6 +44,13 @@ export interface CustomizationState {
   logoUrl: string | null;
 }
 
+export interface ScenarioItem {
+    id: string;
+    question: string;
+    answer: string;
+    parentId: string | null;
+}
+
 export default function Dashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -54,6 +61,8 @@ export default function Dashboard() {
     accentColor: '#FAB91E',
     logoUrl: null,
   });
+
+  const [scenario, setScenario] = useState<ScenarioItem[]>([]);
   
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -83,6 +92,9 @@ export default function Dashboard() {
           if (data.customization) {
             setCustomization(data.customization);
           }
+          if (data.scenario) {
+            setScenario(data.scenario);
+          }
           setUserRole(data.role);
           setDisplayName(data.displayName || '');
           setAvatarUrl(data.avatarUrl || null);
@@ -101,11 +113,7 @@ export default function Dashboard() {
 
     const aiResult = await getAIResponse({ query: text, userId: user.uid });
     
-    // The AI response can be a string or a structured object.
-    // We'll handle both cases for now.
-    const responseText = typeof aiResult.response === 'string' 
-      ? aiResult.response 
-      : (aiResult.response as any).response;
+    const responseText = aiResult.response;
 
     const aiMessage: Message = { sender: 'ai', text: responseText };
     setMessages(prev => [...prev, aiMessage]);
@@ -207,6 +215,8 @@ export default function Dashboard() {
             <CustomizationPanel
               customization={customization}
               setCustomization={setCustomization}
+              scenario={scenario}
+              setScenario={setScenario}
               chatbotId={user.uid}
             />
             <Card>

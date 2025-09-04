@@ -13,10 +13,18 @@ import Logo from './Logo';
 import { getAIResponse } from '@/app/actions';
 import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Badge } from './ui/badge';
 
 interface Message {
   sender: 'user' | 'ai';
   text: string;
+}
+
+interface ScenarioItem {
+    id: string;
+    question: string;
+    answer: string;
+    parentId: string | null;
 }
 
 interface CustomizationState {
@@ -39,6 +47,7 @@ interface LiveChatbotProps {
 
 export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   const [customization, setCustomization] = useState<CustomizationState | null>(null);
+  const [scenario, setScenario] = useState<ScenarioItem[]>([]);
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'ai',
@@ -49,6 +58,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
+  const [currentScriptedQuestions, setCurrentScriptedQuestions] = useState<ScenarioItem[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,8 +75,10 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setCustomization(data.customization || defaultCustomization);
+          const savedScenario = data.scenario || [];
+          setScenario(savedScenario);
+          setCurrentScriptedQuestions(savedScenario.filter((item: ScenarioItem) => item.parentId === null));
         } else {
-          // Fallback to default customization if config not found
           console.warn(`Chatbot configuration not found for ID: ${chatbotId}. Using default.`);
           setCustomization(defaultCustomization);
         }
@@ -83,7 +95,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [messages, isAiTyping]);
+  }, [messages, isAiTyping, currentScriptedQuestions]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
@@ -113,15 +125,13 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     });
   }
 
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim() || !chatbotId) return;
-
-    const userMessage: Message = { sender: 'user', text };
-    setMessages(prev => [...prev, userMessage]);
+  const handleFreeformMessage = async (text: string) => {
     setIsAiTyping(true);
     setInputValue('');
-
+    setCurrentScriptedQuestions([]); // Hide suggestions when user types
+    
     let currentChatId = chatId;
+    const userMessage: Message = { sender: 'user', text };
     if (!currentChatId) {
         currentChatId = await createNewChatSession(userMessage);
     } else {
@@ -134,16 +144,40 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     }
 
     const aiResult = await getAIResponse({ query: text, userId: chatbotId });
-    
     const aiMessage: Message = { sender: 'ai', text: aiResult.response };
     setMessages(prev => [...prev, aiMessage]);
     await addMessageToChat(currentChatId, aiMessage);
+
+    // After AI response, show the root questions again
+    setCurrentScriptedQuestions(scenario.filter(item => item.parentId === null));
     setIsAiTyping(false);
+  };
+
+  const handleScriptedMessage = async (item: ScenarioItem) => {
+    const userMessage: Message = { sender: 'user', text: item.question };
+    const aiMessage: Message = { sender: 'ai', text: item.answer };
+
+    setMessages(prev => [...prev, userMessage, aiMessage]);
+    
+    let currentChatId = chatId;
+    if (!currentChatId) {
+        currentChatId = await createNewChatSession(userMessage);
+        if(currentChatId) await addMessageToChat(currentChatId, aiMessage);
+    } else {
+        await addMessageToChat(currentChatId, userMessage);
+        await addMessageToChat(currentChatId, aiMessage);
+    }
+
+    const nextQuestions = scenario.filter(child => child.parentId === item.id);
+    setCurrentScriptedQuestions(nextQuestions);
   };
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSendMessage(inputValue);
+    if (!inputValue.trim() || !chatbotId) return;
+    const userMessage: Message = { sender: 'user', text: inputValue };
+    setMessages(prev => [...prev, userMessage]);
+    handleFreeformMessage(inputValue);
   };
 
   if (error && !customization) {
@@ -218,6 +252,20 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                     </div>
                 )}
               </div>
+              {!isAiTyping && currentScriptedQuestions.length > 0 && (
+                <div className="p-4 pt-0 flex flex-wrap gap-2 justify-start">
+                    {currentScriptedQuestions.map(item => (
+                        <Badge 
+                            key={item.id} 
+                            variant="outline" 
+                            className="cursor-pointer hover:bg-accent"
+                            onClick={() => handleScriptedMessage(item)}
+                        >
+                            {item.question}
+                        </Badge>
+                    ))}
+                </div>
+              )}
             </ScrollArea>
           </CardContent>
           <CardFooter className="p-4 border-t bg-background">
