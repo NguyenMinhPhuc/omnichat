@@ -54,6 +54,10 @@ export async function getAIResponse({
     const firestore = getDb();
     let knowledgeBaseParts: string[] = [];
 
+    if (!userId || userId.trim() === '') {
+        return { response: "I'm sorry, but a valid chatbot ID was not provided." };
+    }
+
     if (firestore) {
       const userDocRef = firestore.collection('users').doc(userId);
       const userDoc = await userDocRef.get();
@@ -83,6 +87,8 @@ export async function getAIResponse({
             knowledgeBaseParts.push("General Knowledge Documents:\n" + sourcesText);
           }
         }
+      } else {
+         return { response: "I'm sorry, I couldn't find the configuration for this chatbot." };
       }
     }
 
