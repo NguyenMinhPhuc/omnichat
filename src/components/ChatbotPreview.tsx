@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import type { CustomizationState, ScenarioItem } from './Dashboard';
 import Logo from './Logo';
 import { Badge } from './ui/badge';
+import ReactMarkdown from 'react-markdown';
 
 export interface Message {
   sender: 'user' | 'ai';
@@ -112,13 +113,13 @@ export default function ChatbotPreview({
                 )}
                 <div
                   className={cn(
-                    'max-w-xs md:max-w-md lg:max-w-lg rounded-xl px-4 py-2 text-sm shadow',
+                    'max-w-xs md:max-w-md lg:max-w-lg rounded-xl px-4 py-2 text-sm shadow prose',
                     message.sender === 'user'
-                      ? 'bg-[--chat-primary-color] text-primary-foreground rounded-br-none'
+                      ? 'bg-[--chat-primary-color] text-primary-foreground rounded-br-none prose-invert'
                       : 'bg-card text-card-foreground rounded-bl-none'
                   )}
                 >
-                  <p>{message.text}</p>
+                  <ReactMarkdown>{message.text}</ReactMarkdown>
                 </div>
                  {message.sender === 'user' && (
                   <Avatar className="h-8 w-8">

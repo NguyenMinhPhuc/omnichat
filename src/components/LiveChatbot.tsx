@@ -14,6 +14,7 @@ import { getAIResponse } from '@/app/actions';
 import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Badge } from './ui/badge';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -170,7 +171,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
 
     const nextQuestions = scenario.filter(child => child.parentId === item.id);
     // If there are follow-up questions, show them. Otherwise, show the root questions.
-    setCurrentScriptedQuestions(nextQuestions.length > 0 ? nextQuestions : scenario.filter(item => item.parentId === null));
+    setCurrentScriptedQuestions(nextQuestions);
   };
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -221,13 +222,13 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                     )}
                     <div
                       className={cn(
-                        'max-w-xs md:max-w-md lg:max-w-lg rounded-xl px-4 py-2 text-sm shadow',
+                        'max-w-xs md:max-w-md lg:max-w-lg rounded-xl px-4 py-2 text-sm shadow prose',
                         message.sender === 'user'
-                          ? 'bg-[--chat-primary-color] text-primary-foreground rounded-br-none'
+                          ? 'bg-[--chat-primary-color] text-primary-foreground rounded-br-none prose-invert'
                           : 'bg-card text-card-foreground rounded-bl-none'
                       )}
                     >
-                      <p>{message.text}</p>
+                      <ReactMarkdown>{message.text}</ReactMarkdown>
                     </div>
                      {message.sender === 'user' && (
                       <Avatar className="h-8 w-8">
