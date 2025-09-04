@@ -89,21 +89,36 @@ export default function AdminDashboard() {
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');
-    } else if (user) {
-      const userDocRef = doc(db, 'users', user.uid);
-      getDoc(userDocRef).then(userDoc => {
-         if (userDoc.exists() && userDoc.data().role === 'admin') {
-            const userData = userDoc.data();
-            setUserRole(userData.role);
-            setDisplayName(userData.displayName || '');
-            fetchUsersAndChatCounts();
-         } else {
-            router.push('/dashboard');
-         }
-      });
-    }
+    const checkAdminStatusAndFetchData = async () => {
+      if (loading) return; // Wait until auth state is resolved
+
+      if (!user) {
+        router.push('/');
+        return;
+      }
+
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists() && userDoc.data()?.role === 'admin') {
+          const userData = userDoc.data();
+          setUserRole(userData.role);
+          setDisplayName(userData.displayName || '');
+          // Only admins should fetch all users
+          fetchUsersAndChatCounts();
+        } else {
+          // If user doc doesn't exist or role is not admin, redirect
+          router.push('/dashboard');
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        toast({ title: 'Error', description: 'Failed to verify user role.', variant: 'destructive' });
+        router.push('/'); // Redirect on error as well
+      }
+    };
+
+    checkAdminStatusAndFetchData();
   }, [user, loading, router]);
   
   const fetchUsersAndChatCounts = async () => {
