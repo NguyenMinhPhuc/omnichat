@@ -17,7 +17,7 @@ function getDb() {
   if (getApps().length === 0) {
     try {
       // Use require to directly read the JSON file. This is more robust than env variables for multi-line keys.
-      const serviceAccount = require('../../../serviceAccount.json');
+      const serviceAccount = require('../../serviceAccount.json');
       
       adminApp = initializeApp({
         credential: cert(serviceAccount),
