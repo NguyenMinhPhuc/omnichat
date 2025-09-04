@@ -2,14 +2,10 @@
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { IntelligentAIResponseOutput } from '@/ai/schemas';
-import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
-
-interface GetAIResponseInput {
-  query: string;
-  userId: string;
-}
+import { serviceAccount } from '@/lib/serviceAccount';
 
 let db: Firestore;
 
@@ -20,26 +16,11 @@ let db: Firestore;
 function getDb() {
   if (getApps().length === 0) {
     try {
-      // IMPORTANT: The service account object is now constructed from environment variables.
-      // The user must provide these values in the .env file.
-      const serviceAccount = {
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-      };
-
-      // Validate that the required environment variables are set.
-      if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-        throw new Error('Firebase Admin SDK service account information is missing. Please check your .env file.');
-      }
-      
       initializeApp({
         credential: cert(serviceAccount),
       });
-
     } catch (error: any) {
       console.error('Failed to initialize Firebase Admin SDK:', error.message);
-      // Re-throw or handle the error as appropriate for your application
       throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
     }
   }
@@ -58,7 +39,10 @@ function getDb() {
 export async function getAIResponse({
   query,
   userId,
-}: GetAIResponseInput): Promise<IntelligentAIResponseOutput> {
+}: {
+  query: string;
+  userId: string;
+}): Promise<IntelligentAIResponseOutput> {
   try {
     const firestore = getDb();
     let context: string[] = [];
