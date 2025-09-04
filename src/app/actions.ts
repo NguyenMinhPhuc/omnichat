@@ -97,6 +97,15 @@ export async function getAIResponse({
     return result;
   } catch (error) {
     console.error('Error getting AI response:', error);
+
+    // Check for specific quota error
+    if (error instanceof Error && error.message.includes('429 Too Many Requests')) {
+      return {
+        response: "Xin lỗi, hiện tại tôi đang hơi quá tải một chút. Bạn vui lòng thử lại sau vài phút nhé.",
+      };
+    }
+    
+    // Generic error for other issues
     const errorMessage =
       error instanceof Error ? error.message : 'An unexpected error occurred.';
     return {
