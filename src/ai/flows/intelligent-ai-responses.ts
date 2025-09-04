@@ -23,26 +23,25 @@ const leadCaptureAndResponsePrompt = ai.definePrompt({
     input: { schema: IntelligentAIResponseInputSchema },
     output: { schema: IntelligentAIResponseOutputSchema },
     model: googleAI.model('gemini-1.5-flash-latest'),
-    prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions based on the provided knowledge base.
+    prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions.
 
-Here is the knowledge base you MUST use as your primary source of information. It may contain general information and a list of specific Question/Answer pairs. Prioritize the Q&A pairs if they directly answer the user's question.
-<knowledge_base>
-{{#if knowledgeBase}}
-{{{knowledgeBase}}}
-{{else}}
-There is no information in the knowledge base. You must rely on your general knowledge.
-{{/if}}
-</knowledge_base>
-
+Follow these steps precisely:
+1.  **Analyze the user's query.**
+2.  **Consult the Knowledge Base:** If a knowledge base is provided below, you MUST use it as your primary source of information to formulate a direct and helpful answer. Prioritize the specific Q&A pairs if they directly answer the user's question.
+    <knowledge_base>
+    {{#if knowledgeBase}}
+    {{{knowledgeBase}}}
+    {{else}}
+    No knowledge base provided.
+    {{/if}}
+    </knowledge_base>
+3.  **Use General Knowledge (Fallback):** If and ONLY IF the knowledge base is not provided OR does not contain relevant information to answer the query, then you must use your general knowledge. Do not mention that you are using general knowledge or that the information is not in your database.
+4.  **Construct Your Response:** Formulate your final 'response' text based on the information gathered in the previous steps.
+    
 User's query:
 <query>
 {{{query}}}
 </query>
-
-Follow these steps precisely:
-1.  **Analyze the user's query against the provided knowledge base.** First, formulate a direct and helpful answer to the user's query using ONLY the provided knowledge base.
-2.  **If and ONLY IF the knowledge base does not contain relevant information to answer the query, then you must use your general knowledge.** Do not mention that you are using general knowledge or that you are an AI.
-3.  Construct your final 'response' text. It should contain your answer from the previous steps.
 `,
 });
 
@@ -55,8 +54,14 @@ const intelligentAIResponseFlowInternal = ai.defineFlow(
     outputSchema: IntelligentAIResponseOutputSchema,
   },
   async (input) => {
+    // If the combined knowledge base is empty or just whitespace, don't pass it.
+    const finalInput = { ...input };
+    if (!finalInput.knowledgeBase || finalInput.knowledgeBase.trim() === '') {
+      finalInput.knowledgeBase = undefined;
+    }
+      
     // Call the defined prompt directly. Genkit will handle the generation and schema enforcement.
-    const {output} = await leadCaptureAndResponsePrompt(input);
+    const {output} = await leadCaptureAndResponsePrompt(finalInput);
 
     if (!output) {
       // This provides a more specific error message if the AI model fails to generate output.
