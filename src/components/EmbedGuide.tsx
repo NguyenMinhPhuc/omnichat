@@ -24,7 +24,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
     if (typeof window === 'undefined' || !chatbotId) {
       return;
     }
-    const origin = window.location.origin;
+    const origin = 'http://omnichat.fitlhu.com';
 
     const cssSnippet = `
 .chat-bubble {
@@ -50,6 +50,8 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
 .chat-bubble svg {
   width: 32px;
   height: 32px;
+  animation: wave-animation 2.5s infinite;
+  transform-origin: 70% 70%;
 }
 .chat-box {
   position: fixed;
@@ -68,6 +70,16 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
 .chat-box.open {
     display: flex;
 }
+@keyframes wave-animation {
+  0% { transform: rotate(0deg) translateY(0); }
+  10% { transform: rotate(14deg) translateY(-5px); }
+  20% { transform: rotate(-8deg) translateY(0); }
+  30% { transform: rotate(14deg) translateY(-5px); }
+  40% { transform: rotate(-4deg) translateY(0); }
+  50% { transform: rotate(10deg) translateY(-5px); }
+  60% { transform: rotate(0deg) translateY(0); }
+  100% { transform: rotate(0deg) translateY(0); }
+}
     `;
     setCssCode(cssSnippet.trim());
 
@@ -81,8 +93,10 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
 
 <!-- The chat bubble trigger -->
 <div class="chat-bubble" id="omnichat-toggle">
-  <!-- You can use an SVG icon or an <img> tag -->
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.75 2.5a.75.75 0 0 0-1.5 0v1.563c-1.43.41-2.65 1.2-3.645 2.247a.75.75 0 0 0 1.04 1.082A7.493 7.493 0 0 1 8 5.563V4a.75.75 0 0 0-.25-.5Z"/><path fill-rule="evenodd" d="M12 1.25a.75.75 0 0 1 .75.75v18.5a.75.75 0 0 1-1.5 0V2a.75.75 0 0 1 .75-.75ZM16.25 4a.75.75 0 0 0-.25.5v1.563a7.493 7.493 0 0 1 4.355 1.784.75.75 0 0 0 1.04-1.082c-.994-1.046-2.215-1.838-3.645-2.247V2.5a.75.75 0 0 0-1.5 0v1.5ZM4.645 7.39a.75.75 0 0 0-1.04 1.082 9.003 9.003 0 0 0 0 7.056.75.75 0 1 0 1.04 1.082A7.503 7.503 0 0 1 3 12a7.503 7.503 0 0 1 1.645-4.61ZM19.355 7.39A7.503 7.503 0 0 1 21 12a7.503 7.503 0 0 1-1.645 4.61.75.75 0 1 0 1.04 1.082 9.003 9.003 0 0 0 0-7.056.75.75 0 1 0-1.04 1.082Z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.85 0 3.58-.51 5.07-1.38L20.59 22l-1.42-1.42C20.49 18.58 21 16.85 21 15c0-5.52-4.48-10-9-10zm-2 11H8v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" opacity="0.3"/>
+    <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+  </svg>
 </div>
 
 <!-- The script that loads your chatbot -->
