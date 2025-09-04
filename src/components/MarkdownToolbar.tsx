@@ -1,8 +1,9 @@
+
 'use client';
 
 import React from 'react';
 import { Button } from './ui/button';
-import { Bold, Italic, Heading1, Heading2, Heading3, List, ListOrdered } from 'lucide-react';
+import { Bold, Italic, Heading1, Heading2, Heading3, List, ListOrdered, Image, Video } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface MarkdownToolbarProps {
@@ -13,7 +14,7 @@ interface MarkdownToolbarProps {
 
 const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ textareaRef, onValueChange, currentValue }) => {
 
-  const applyFormat = (prefix: string, suffix: string = prefix, placeholder: string = 'text') => {
+  const applyFormat = (prefix: string, suffix: string = '', placeholder: string = 'text') => {
     if (!textareaRef.current) return;
 
     const textarea = textareaRef.current;
@@ -71,11 +72,13 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ textareaRef, onValueC
     { icon: Heading3, tooltip: 'Heading 3', onClick: () => applyLineFormat('### ') },
     { icon: List, tooltip: 'Bulleted List', onClick: () => applyLineFormat('- ') },
     { icon: ListOrdered, tooltip: 'Numbered List', onClick: () => applyLineFormat('1. ') },
+    { icon: Image, tooltip: 'Insert Image', onClick: () => applyFormat('![alt text](', ')', 'image_url') },
+    { icon: Video, tooltip: 'Embed Video', onClick: () => applyFormat('<iframe src="', '" width="560" height="315" frameborder="0" allowfullscreen></iframe>', 'video_url') },
   ];
 
   return (
     <TooltipProvider>
-        <div className="flex items-center gap-1 rounded-t-md border border-b-0 border-input p-1 bg-muted">
+        <div className="flex items-center gap-1 rounded-t-md border border-b-0 border-input p-1 bg-muted flex-wrap">
         {buttons.map(({ icon: Icon, tooltip, onClick }, index) => (
             <Tooltip key={index}>
             <TooltipTrigger asChild>
