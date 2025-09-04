@@ -13,20 +13,7 @@ interface EmbedGuideProps {
   chatbotId: string;
 }
 
-export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
-  const { toast } = useToast();
-  const [cssCode, setCssCode] = useState('');
-  const [htmlCode, setHtmlCode] = useState('');
-  const [jsCode, setJsCode] = useState('');
-  const [fullHtmlCode, setFullHtmlCode] = useState('');
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !chatbotId) {
-      return;
-    }
-    const origin = 'http://omnichat.fitlhu.com';
-
-    const cssSnippet = `
+const getCssCode = () => `
 .chat-bubble {
   position: fixed;
   bottom: 20px;
@@ -80,10 +67,11 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
   60% { transform: rotate(0deg) translateY(0); }
   100% { transform: rotate(0deg) translateY(0); }
 }
-    `;
-    setCssCode(cssSnippet.trim());
+`.trim();
 
-    const htmlSnippet = `
+const getHtmlCode = (chatbotId: string) => {
+    const origin = 'http://omnichat.fitlhu.com';
+    return `
 <!-- Container for the chat window -->
 <div class="chat-box" id="omnichat-box">
   <div id="omnichat-container" style="width: 100%; height: 100%;">
@@ -94,8 +82,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
 <!-- The chat bubble trigger -->
 <div class="chat-bubble" id="omnichat-toggle">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.85 0 3.58-.51 5.07-1.38L20.59 22l-1.42-1.42C20.49 18.58 21 16.85 21 15c0-5.52-4.48-10-9-10zm-2 11H8v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" opacity="0.3"/>
-    <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+    <path d="M12 2a10 10 0 0 0-10 10c0 4.42 2.87 8.17 6.84 9.5.2.04.36.2.36.4v1.6c0 .28-.22.5-.5.5h-4a.5.5 0 0 1 0-1h3.5v-1.12c0-.22-.1-.42-.26-.56A8.01 8.01 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 2.05-.78 3.92-2.08 5.34-.16.14-.26.34-.26.56V21.5H20a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5v-1.6c0-.2.16-.36.36-.4C19.13 20.17 22 16.42 22 12A10 10 0 0 0 12 2Zm-1 14H9v-2h2v2Zm4 0h-2v-2h2v2Zm-4-4H9V9h2v3Zm4 0h-2V9h2v3Z"/>
   </svg>
 </div>
 
@@ -107,10 +94,10 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
   data-target-id="omnichat-container"
   defer>
 <\/script>
-    `;
-    setHtmlCode(htmlSnippet.trim());
+    `.trim();
+};
 
-    const jsSnippet = `
+const getJsCode = () => `
 const chatToggle = document.getElementById("omnichat-toggle");
 const chatBox = document.getElementById("omnichat-box");
 
@@ -119,10 +106,18 @@ if (chatToggle && chatBox) {
         chatBox.classList.toggle("open");
     });
 }
-    `;
-    setJsCode(jsSnippet.trim());
-    
-    const fullCode = `
+`.trim();
+
+
+export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
+  const { toast } = useToast();
+  
+  // No need for useEffect or useState for this static content
+  const cssCode = getCssCode();
+  const htmlCode = getHtmlCode(chatbotId);
+  const jsCode = getJsCode();
+
+  const fullHtmlCode = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -134,25 +129,21 @@ if (chatToggle && chatBox) {
             font-family: sans-serif;
             padding: 2rem;
         }
-        ${cssSnippet.trim()}
+        ${cssCode}
     </style>
 </head>
 <body>
     <h1>My Website</h1>
     <p>This is a demo page with the OmniChat bubble embedded.</p>
 
-    ${htmlSnippet.trim()}
+    ${htmlCode}
 
     <script>
-        ${jsSnippet.trim()}
+        ${jsCode}
     <\/script>
 </body>
 </html>
-    `;
-    setFullHtmlCode(fullCode.trim());
-
-
-  }, [chatbotId]);
+    `.trim();
 
   const copyToClipboard = (text: string) => {
     if (!text) return;
@@ -175,7 +166,7 @@ if (chatToggle && chatBox) {
           <div className="relative">
             <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
               <code>
-                {cssCode || 'Loading...'}
+                {cssCode}
               </code>
             </pre>
             <Button
@@ -183,7 +174,6 @@ if (chatToggle && chatBox) {
               size="icon"
               className="absolute top-2 right-2 h-7 w-7"
               onClick={() => copyToClipboard(cssCode)}
-              disabled={!cssCode}
             >
               <Copy className="h-4 w-4" />
             </Button>
@@ -197,7 +187,7 @@ if (chatToggle && chatBox) {
           <div className="relative">
             <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
               <code>
-                {htmlCode || 'Loading...'}
+                {htmlCode}
               </code>
             </pre>
             <Button
@@ -205,7 +195,6 @@ if (chatToggle && chatBox) {
               size="icon"
               className="absolute top-2 right-2 h-7 w-7"
               onClick={() => copyToClipboard(htmlCode)}
-              disabled={!htmlCode}
             >
               <Copy className="h-4 w-4" />
             </Button>
@@ -219,7 +208,7 @@ if (chatToggle && chatBox) {
           <div className="relative">
             <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
               <code>
-                {jsCode || 'Loading...'}
+                {jsCode}
               </code>
             </pre>
             <Button
@@ -227,7 +216,6 @@ if (chatToggle && chatBox) {
               size="icon"
               className="absolute top-2 right-2 h-7 w-7"
               onClick={() => copyToClipboard(jsCode)}
-              disabled={!jsCode}
             >
               <Copy className="h-4 w-4" />
             </Button>
@@ -242,7 +230,7 @@ if (chatToggle && chatBox) {
           <div className="relative">
             <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
               <code>
-                {fullHtmlCode || 'Loading...'}
+                {fullHtmlCode}
               </code>
             </pre>
             <Button
@@ -250,7 +238,6 @@ if (chatToggle && chatBox) {
               size="icon"
               className="absolute top-2 right-2 h-7 w-7"
               onClick={() => copyToClipboard(fullHtmlCode)}
-              disabled={!fullHtmlCode}
             >
               <Copy className="h-4 w-4" />
             </Button>
