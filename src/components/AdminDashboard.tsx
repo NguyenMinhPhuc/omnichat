@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound, MessageSquare, CheckCircle, Clock, XCircle, Search } from 'lucide-react';
+import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound, MessageSquare, CheckCircle, Clock, XCircle, Search, Phone } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -65,6 +65,7 @@ interface UserData {
   id: string;
   email: string;
   displayName: string;
+  phoneNumber?: string;
   avatarUrl: string | null;
   role: 'admin' | 'user';
   status: 'active' | 'pending' | 'banned';
@@ -453,6 +454,12 @@ export default function AdminDashboard() {
                             <div>
                                 <div className="font-medium">{u.displayName}</div>
                                 <div className="text-sm text-muted-foreground">{u.email}</div>
+                                {u.phoneNumber && (
+                                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                        <Phone className="h-3 w-3" />
+                                        {u.phoneNumber}
+                                    </div>
+                                )}
                             </div>
                             </div>
                         </TableCell>

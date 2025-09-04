@@ -17,6 +17,8 @@ import { Bot } from 'lucide-react';
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const router = useRouter();
   const { toast } = useToast();
 
@@ -29,7 +31,8 @@ export default function Signup() {
       // Create user document in Firestore
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
-        displayName: user.email?.split('@')[0] || 'New User',
+        displayName: displayName,
+        phoneNumber: phoneNumber,
         role: 'user', // Default role
         status: 'pending', // Default status is now pending
         avatarUrl: null,
@@ -80,6 +83,17 @@ export default function Signup() {
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                placeholder="e.g., John Doe"
+              />
+            </div>
+            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -87,6 +101,17 @@ export default function Signup() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                placeholder="e.g., john.doe@example.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="e.g., 0909123456"
               />
             </div>
             <div>
@@ -97,6 +122,7 @@ export default function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
             <Button type="submit" className="w-full">Sign Up</Button>

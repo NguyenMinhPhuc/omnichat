@@ -45,6 +45,7 @@ export default function Profile() {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'user' | 'admin' | null>(null);
   const [displayName, setDisplayName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [knowledgeBase, setKnowledgeBase] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
@@ -61,6 +62,7 @@ export default function Profile() {
             const userData = userDoc.data();
             setUserRole(userData.role);
             setDisplayName(userData.displayName || '');
+            setPhoneNumber(userData.phoneNumber || '');
             setAvatarUrl(userData.avatarUrl || null);
             setKnowledgeBase(userData.knowledgeBase || '');
             setGeminiApiKey(userData.geminiApiKey || '');
@@ -78,6 +80,7 @@ export default function Profile() {
         const userDocRef = doc(db, 'users', user.uid);
         const updateData: any = { 
             displayName,
+            phoneNumber,
             knowledgeBase,
         };
         
@@ -288,6 +291,11 @@ export default function Profile() {
                       <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input id="email" type="email" value={user.email || ''} disabled />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="phoneNumber">Phone Number</Label>
+                        <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
                       </div>
 
                       <div className="space-y-2">
