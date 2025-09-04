@@ -25,7 +25,7 @@ const leadCaptureAndResponsePrompt = ai.definePrompt({
     model: googleAI.model('gemini-1.5-flash-latest'),
     prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions based on the provided knowledge base.
 
-Here is the knowledge base you should use as your primary source of information:
+Here is the knowledge base you MUST use as your primary source of information. It may contain general information and a list of specific Question/Answer pairs. Prioritize the Q&A pairs if they directly answer the user's question.
 <knowledge_base>
 {{#if knowledgeBase}}
 {{{knowledgeBase}}}

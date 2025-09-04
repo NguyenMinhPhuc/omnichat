@@ -39,7 +39,7 @@ function getDb() {
 
 /**
  * Fetches an AI response using the Genkit flow.
- * If a knowledge base exists for the user, it's retrieved and passed to the AI.
+ * If a knowledge base or scenario exists for the user, it's retrieved and passed to the AI.
  */
 export async function getAIResponse({
   query,
@@ -50,23 +50,37 @@ export async function getAIResponse({
 }): Promise<IntelligentAIResponseOutput> {
   try {
     const firestore = getDb();
-    let knowledgeBase: string | undefined = undefined;
+    let knowledgeBaseParts: string[] = [];
 
     if (firestore) {
       const userDocRef = firestore.collection('users').doc(userId);
       const userDoc = await userDocRef.get();
+      
       if (userDoc.exists) {
         const userData = userDoc.data();
-        if (userData && userData.knowledgeBase && typeof userData.knowledgeBase === 'string' && userData.knowledgeBase.trim() !== '') {
-          knowledgeBase = userData.knowledgeBase;
+        if (userData) {
+          // Add the general knowledge base if it exists
+          if (userData.knowledgeBase && typeof userData.knowledgeBase === 'string' && userData.knowledgeBase.trim() !== '') {
+            knowledgeBaseParts.push("General Information:\n" + userData.knowledgeBase);
+          }
+
+          // Add the scenario Q&A if it exists
+          if (Array.isArray(userData.scenario) && userData.scenario.length > 0) {
+            const scenarioText = userData.scenario
+              .map((item: ScenarioItem) => `Q: ${item.question}\nA: ${item.answer}`)
+              .join('\n\n');
+            knowledgeBaseParts.push("Scripted Q&A:\n" + scenarioText);
+          }
         }
       }
     }
 
+    const combinedKnowledgeBase = knowledgeBaseParts.join('\n\n---\n\n');
+
     const result = await intelligentAIResponseFlow({
       query,
       userId,
-      knowledgeBase,
+      knowledgeBase: combinedKnowledgeBase,
     });
 
     return result;
