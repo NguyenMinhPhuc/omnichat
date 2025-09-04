@@ -128,7 +128,7 @@ export default function AdminDashboard() {
 
     // We call the async function.
     checkAdminStatusAndFetchData();
-  }, [user, loading, router, toast]);
+  }, [user, loading]);
   
   const fetchUsersAndChatCounts = async () => {
     setIsLoadingUsers(true);
@@ -578,5 +578,3 @@ export default function AdminDashboard() {
     </TooltipProvider>
   );
 }
-
-    
