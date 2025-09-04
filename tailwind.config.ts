@@ -1,4 +1,5 @@
 import type {Config} from 'tailwindcss';
+import { fontFamily } from "tailwindcss/defaultTheme";
 
 export default {
   darkMode: ['class'],
@@ -16,29 +17,8 @@ export default {
       },
     },
     extend: {
-      typography: ({ theme }: { theme: any }) => ({
-        DEFAULT: {
-          css: {
-            '--tw-prose-body': theme('colors.foreground / 1'),
-            '--tw-prose-headings': theme('colors.foreground / 1'),
-            '--tw-prose-lead': theme('colors.foreground / 1'),
-            '--tw-prose-links': theme('colors.primary / 1'),
-            '--tw-prose-bold': theme('colors.foreground / 1'),
-            '--tw-prose-counters': theme('colors.muted-foreground / 1'),
-            '--tw-prose-bullets': theme('colors.muted-foreground / 1'),
-            '--tw-prose-hr': theme('colors.border / 1'),
-            '--tw-prose-quotes': theme('colors.foreground / 1'),
-            '--tw-prose-quote-borders': theme('colors.primary / 1'),
-            '--tw-prose-captions': theme('colors.muted-foreground / 1'),
-            '--tw-prose-code': theme('colors.foreground / 1'),
-            '--tw-prose-pre-code': theme('colors.foreground / 1'),
-            '--tw-prose-pre-bg': theme('colors.muted / 1'),
-            '--tw-prose-th-borders': theme('colors.border / 1'),
-            '--tw-prose-td-borders': theme('colors.border / 1'),
-          },
-        },
-      }),
       fontFamily: {
+        sans: ["var(--font-sans)", ...fontFamily.sans],
         body: ['PT Sans', 'sans-serif'],
         headline: ['Poppins', 'sans-serif'],
         code: ['monospace'],
