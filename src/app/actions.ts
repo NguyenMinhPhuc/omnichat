@@ -11,32 +11,27 @@ let adminApp: App | null = null;
 
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
- * Ensures that initialization only happens once.
+ * Ensures that initialization only happens once by reading from a physical JSON file.
  */
 function getDb() {
-  if (!adminApp) {
-    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (!serviceAccountString) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
-    }
-    
+  if (getApps().length === 0) {
     try {
-      const serviceAccount = JSON.parse(serviceAccountString);
-      if (getApps().length === 0) {
-        adminApp = initializeApp({
-          credential: cert(serviceAccount),
-        });
-      } else {
-        adminApp = getApps()[0];
-      }
+      // Use require to directly read the JSON file. This is more robust than env variables for multi-line keys.
+      const serviceAccount = require('../../../serviceAccount.json');
+      
+      adminApp = initializeApp({
+        credential: cert(serviceAccount),
+      });
     } catch (error: any) {
-      console.error('Failed to parse or initialize Firebase Admin SDK:', error.message);
-      throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
+      console.error('Failed to initialize Firebase Admin SDK:', error.message);
+      throw new Error(`Firebase Admin SDK initialization failed: ${error.message}. Make sure 'serviceAccount.json' is present and correctly formatted in the root directory.`);
     }
+  } else {
+    adminApp = getApps()[0];
   }
   
   if (!db) {
-     db = getFirestore(adminApp);
+     db = getFirestore(adminApp!);
   }
   return db;
 }
@@ -62,14 +57,12 @@ export async function getAIResponse({
       const userDoc = await userDocRef.get();
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        // This assumes knowledge base is a single string. If it can be an array, adjust accordingly.
         if (userData && userData.knowledgeBase && typeof userData.knowledgeBase === 'string' && userData.knowledgeBase.trim() !== '') {
           context = [userData.knowledgeBase];
         }
       }
     }
 
-    // Calling the AI flow
     const result = await intelligentAIResponseFlow({
       query,
       userId,
