@@ -25,7 +25,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info } from 'lucide-react';
+import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,8 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from './ui/textarea';
-import MarkdownToolbar from './MarkdownToolbar';
+import MarkdownEditor from './MarkdownEditor';
 
 
 export default function Profile() {
@@ -48,8 +47,6 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [knowledgeBase, setKnowledgeBase] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const knowledgeTextareaRef = useRef<HTMLTextAreaElement>(null);
-
 
   useEffect(() => {
     if (!loading && !user) {
@@ -86,10 +83,12 @@ export default function Profile() {
         await updateDoc(userDocRef, updateData);
 
         // Also update profile in Firebase Auth
-        await updateAuthProfile(auth.currentUser!, {
-            displayName,
-            photoURL: avatarUrl,
-        });
+        if(auth.currentUser) {
+            await updateAuthProfile(auth.currentUser, {
+                displayName,
+                photoURL: avatarUrl,
+            });
+        }
 
         toast({ title: "Profile Updated", description: "Your profile has been updated successfully." });
     } catch (error: any) {
@@ -162,7 +161,7 @@ export default function Profile() {
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href="/dashboard/embed">
-                  <Info />
+                  <Code />
                   Embed
                 </Link>
               </SidebarMenuButton>
@@ -287,18 +286,11 @@ export default function Profile() {
                             <CardDescription>
                                 Provide some background information for the AI. This can be about you, your company, or any general context you want the chatbot to know.
                             </CardDescription>
-                            <MarkdownToolbar 
-                                textareaRef={knowledgeTextareaRef}
-                                currentValue={knowledgeBase}
-                                onValueChange={setKnowledgeBase}
-                            />
-                            <Textarea 
-                                id="knowledgeBase" 
-                                ref={knowledgeTextareaRef}
-                                className="h-32 rounded-t-none"
+                             <MarkdownEditor
                                 value={knowledgeBase}
-                                onChange={(e) => setKnowledgeBase(e.target.value)}
+                                onValueChange={setKnowledgeBase}
                                 placeholder="e.g., OmniChat is a leading provider of AI chatbot solutions..."
+                                textareaHeightClass="h-32"
                             />
                         </div>
                         

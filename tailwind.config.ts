@@ -16,6 +16,28 @@ export default {
       },
     },
     extend: {
+      typography: ({ theme }: { theme: any }) => ({
+        DEFAULT: {
+          css: {
+            '--tw-prose-body': theme('colors.foreground / 1'),
+            '--tw-prose-headings': theme('colors.foreground / 1'),
+            '--tw-prose-lead': theme('colors.foreground / 1'),
+            '--tw-prose-links': theme('colors.primary / 1'),
+            '--tw-prose-bold': theme('colors.foreground / 1'),
+            '--tw-prose-counters': theme('colors.muted-foreground / 1'),
+            '--tw-prose-bullets': theme('colors.muted-foreground / 1'),
+            '--tw-prose-hr': theme('colors.border / 1'),
+            '--tw-prose-quotes': theme('colors.foreground / 1'),
+            '--tw-prose-quote-borders': theme('colors.primary / 1'),
+            '--tw-prose-captions': theme('colors.muted-foreground / 1'),
+            '--tw-prose-code': theme('colors.foreground / 1'),
+            '--tw-prose-pre-code': theme('colors.foreground / 1'),
+            '--tw-prose-pre-bg': theme('colors.muted / 1'),
+            '--tw-prose-th-borders': theme('colors.border / 1'),
+            '--tw-prose-td-borders': theme('colors.border / 1'),
+          },
+        },
+      }),
       fontFamily: {
         body: ['PT Sans', 'sans-serif'],
         headline: ['Poppins', 'sans-serif'],
@@ -102,5 +124,5 @@ export default {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [require('tailwindcss-animate'), require('@tailwindcss/typography')],
 } satisfies Config;

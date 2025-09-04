@@ -1,18 +1,17 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle, Trash2, GripVertical, Save, CornerDownRight, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { updateScenario } from '@/app/actions';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
-import MarkdownToolbar from './MarkdownToolbar';
 import { Label } from './ui/label';
+import MarkdownEditor from './MarkdownEditor';
 
 export interface ScenarioItem {
   id: string;
@@ -37,8 +36,6 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
     handleRemoveItem: (id: string) => void;
     children: React.ReactNode;
 }> = ({ item, level, handleInputChange, handleAddItem, handleRemoveItem, children }) => {
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const id = `answer-textarea-${item.id}`;
     
     return (
         <div className="ml-4" style={{ marginLeft: `${level * 2}rem` }}>
@@ -58,19 +55,11 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
                         />
                         </div>
                         <div>
-                        <Label htmlFor={id}>Answer</Label>
-                        <MarkdownToolbar
-                            textareaRef={textareaRef}
-                            currentValue={item.answer}
-                            onValueChange={(value) => handleInputChange(item.id, 'answer', value)}
-                         />
-                        <Textarea
-                            id={id}
-                            ref={textareaRef}
-                            placeholder="e.g., We are open from 9 AM to 5 PM, Monday to Friday."
+                        <Label>Answer</Label>
+                        <MarkdownEditor 
                             value={item.answer}
-                            onChange={e => handleInputChange(item.id, 'answer', e.target.value)}
-                            className="rounded-t-none"
+                            onValueChange={(value) => handleInputChange(item.id, 'answer', value)}
+                            placeholder="e.g., We are open from 9 AM to 5 PM, Monday to Friday."
                         />
                         </div>
                         <div className="flex gap-2">

@@ -13,7 +13,6 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
 import ScenarioEditor from './ScenarioEditor';
-import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { addKnowledgeSource, updateKnowledgeSource, deleteKnowledgeSource } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -38,7 +37,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import MarkdownToolbar from './MarkdownToolbar';
+import MarkdownEditor from './MarkdownEditor';
 
 interface CustomizationPanelProps {
   customization: CustomizationState;
@@ -64,7 +63,6 @@ export default function CustomizationPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSource, setCurrentSource] = useState<Partial<KnowledgeSource> | null>(null);
-  const knowledgeTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const updateFirestoreCustomization = async (data: any) => {
     if (!user) return;
@@ -243,7 +241,7 @@ export default function CustomizationPanel({
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                   <DialogTitle>{currentSource?.id ? 'Edit' : 'Add'} Knowledge Source</DialogTitle>
               </DialogHeader>
@@ -259,19 +257,11 @@ export default function CustomizationPanel({
                   </div>
                   <div>
                       <Label htmlFor="ks-content">Content</Label>
-                      <MarkdownToolbar 
-                        textareaRef={knowledgeTextareaRef}
-                        currentValue={currentSource?.content || ''}
-                        onValueChange={(value) => setCurrentSource(prev => ({ ...prev, content: value }))}
-                      />
-                      <Textarea 
-                        id="ks-content" 
-                        ref={knowledgeTextareaRef}
-                        placeholder="Enter all information related to this topic. You can use Markdown for formatting." 
-                        className="h-48 rounded-t-none"
-                        value={currentSource?.content || ''}
-                        onChange={(e) => setCurrentSource(prev => ({ ...prev, content: e.target.value }))}
-                      />
+                       <MarkdownEditor
+                            value={currentSource?.content || ''}
+                            onValueChange={(value) => setCurrentSource(prev => ({ ...prev, content: value }))}
+                            placeholder="Enter all information related to this topic. You can use Markdown for formatting."
+                        />
                   </div>
               </div>
               <DialogFooter>
@@ -288,5 +278,3 @@ export default function CustomizationPanel({
     </Card>
   );
 }
-
-    
