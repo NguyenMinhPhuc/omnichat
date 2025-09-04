@@ -4,7 +4,6 @@ import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { IntelligentAIResponseOutput } from '@/ai/schemas';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import { firebaseConfig } from '@/lib/firebaseConfig';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
 
 interface GetAIResponseInput {
@@ -19,24 +18,34 @@ let db: Firestore;
  * Ensures that initialization only happens once.
  */
 function getDb() {
-  if (!db) {
+  if (getApps().length === 0) {
     try {
-      if (!getApps().length) {
-        const serviceAccount = {
-          projectId: firebaseConfig.projectId,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-          privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-        };
-        initializeApp({
-          credential: cert(serviceAccount),
-        });
+      // IMPORTANT: The service account object is now constructed from environment variables.
+      // The user must provide these values in the .env file.
+      const serviceAccount = {
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+      };
+
+      // Validate that the required environment variables are set.
+      if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+        throw new Error('Firebase Admin SDK service account information is missing. Please check your .env file.');
       }
-      db = getFirestore();
+      
+      initializeApp({
+        credential: cert(serviceAccount),
+      });
+
     } catch (error: any) {
       console.error('Failed to initialize Firebase Admin SDK:', error.message);
       // Re-throw or handle the error as appropriate for your application
       throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
     }
+  }
+  // Initialize db only after the app has been initialized.
+  if (!db) {
+     db = getFirestore();
   }
   return db;
 }
