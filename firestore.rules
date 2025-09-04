@@ -1,51 +1,31 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // By default, deny all reads and writes
-    match /{document=**} {
-      allow read, write: if false;
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow public read access to specific chatbot configuration fields
-      // This is necessary for the embedded chatbot to function for unauthenticated visitors.
+      // Allow anyone to read a specific user's config for the public chatbot to work.
       allow get: if true;
-      allow list: if false; // Don't allow listing all users
-
-      // Allow authenticated users to update their own data, but not change their role or status.
-      allow update: if request.auth != null && request.auth.uid == userId
-                      && !('role' in request.resource.data)
-                      && !('status' in request.resource.data);
-      
-      // Allow admin users to update any user's data (including role and status)
-      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-
-      // Allow admin users to delete users
-      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-
-      // Disallow document creation by clients for safety, should be handled by backend/signup logic
-      allow create: if request.auth != null;
+      // Allow admin users to list all users for the admin dashboard.
+      allow list: if request.auth != null && isAdmin();
+      // Only the user themselves can update their own data.
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Rules for the 'chats' collection
+    // Chats can be created by anyone for the embedded bot.
+    // Reading/updating chats should be restricted to the chatbot owner (admin/user).
     match /chats/{chatId} {
-      // Allow anyone to create a new chat session.
-      // This is essential for the live chatbot to start a conversation.
       allow create: if true;
-
-      // Allow anyone to add messages to their own chat session.
-      // The document data contains the chatbotId, which we can check against.
-      allow update: if true; // Keeping this open for simplicity of adding messages
-
-      // Only the chatbot owner (a logged-in user) can read the chat history.
-      allow get, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data != null
-                       && resource.data.chatbotId == request.auth.uid;
-                       
-      // Nobody can delete chats from the client.
-      allow delete: if false;
+      // Let's restrict read/update/delete to the owner of the chatbot for now.
+      // This means only the user who owns the bot can see chat history in the dashboard.
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.chatbotId;
     }
   }
 }
