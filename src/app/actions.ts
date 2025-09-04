@@ -53,6 +53,7 @@ export async function getAIResponse({
   try {
     const firestore = getDb();
     let knowledgeBaseParts: string[] = [];
+    let userApiKey: string | undefined = undefined;
 
     if (!userId || userId.trim() === '') {
         return { response: "I'm sorry, but a valid chatbot ID was not provided." };
@@ -65,6 +66,7 @@ export async function getAIResponse({
       if (userDoc.exists) {
         const userData = userDoc.data();
         if (userData) {
+          userApiKey = userData.geminiApiKey;
           
           // Add the general knowledgeBase if it exists and is not empty
           if (userData.knowledgeBase && userData.knowledgeBase.trim() !== '') {
@@ -98,6 +100,7 @@ export async function getAIResponse({
       query,
       userId,
       knowledgeBase: combinedKnowledgeBase,
+      apiKey: userApiKey,
     });
 
     return result;
@@ -234,5 +237,3 @@ export async function deleteKnowledgeSource(userId: string, sourceId: string): P
         return { success: false, message: `Failed to delete knowledge source: ${errorMessage}` };
     }
 }
-
-    

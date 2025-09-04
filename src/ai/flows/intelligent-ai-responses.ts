@@ -1,7 +1,8 @@
+
 'use server';
 
 import {ai} from '@/ai/genkit';
-import {googleAI} from '@genkit-ai/googleai';
+import {googleAI, GoogleAIGeminiModel} from '@genkit-ai/googleai';
 import {
   IntelligentAIResponseInput,
   IntelligentAIResponseOutput,
@@ -16,14 +17,7 @@ export async function intelligentAIResponseFlow(
   return await intelligentAIResponseFlowInternal(input);
 }
 
-// Define the prompt with the model and output schema.
-// By defining the prompt separately, we ensure Genkit handles forcing the output to match the schema.
-const leadCaptureAndResponsePrompt = ai.definePrompt({
-    name: 'leadCaptureAndResponsePrompt',
-    input: { schema: IntelligentAIResponseInputSchema },
-    output: { schema: IntelligentAIResponseOutputSchema },
-    model: googleAI.model('gemini-1.5-flash-latest'),
-    prompt: `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions.
+const basePrompt = `You are a helpful and friendly AI assistant for a business. Your primary goal is to answer user questions.
 
 Follow these steps precisely:
 1.  **Analyze the user's query.**
@@ -42,9 +36,7 @@ User's query:
 <query>
 {{{query}}}
 </query>
-`,
-});
-
+`;
 
 // The internal Genkit flow is defined at the module's top-level scope.
 const intelligentAIResponseFlowInternal = ai.defineFlow(
@@ -59,6 +51,30 @@ const intelligentAIResponseFlowInternal = ai.defineFlow(
     if (!finalInput.knowledgeBase || finalInput.knowledgeBase.trim() === '') {
       finalInput.knowledgeBase = undefined;
     }
+
+    // Determine which API key to use. Fallback to environment variable.
+    const apiKey = finalInput.apiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return {
+        response:
+          "I'm sorry, the chatbot is not configured correctly. An API key is missing.",
+      };
+    }
+
+    // Create a model instance with the specific API key for this request.
+    const model = googleAI.model('gemini-1.5-flash-latest', { apiKey });
+
+    // Define the prompt dynamically inside the flow to use the request-specific model.
+    const leadCaptureAndResponsePrompt = ai.definePrompt(
+      {
+        name: 'leadCaptureAndResponsePrompt_dynamic', // Use a unique name to avoid conflicts
+        input: { schema: IntelligentAIResponseInputSchema },
+        output: { schema: IntelligentAIResponseOutputSchema },
+        model: model as GoogleAIGeminiModel, // Cast to the correct type
+        prompt: basePrompt,
+      },
+    );
       
     // Call the defined prompt directly. Genkit will handle the generation and schema enforcement.
     const {output} = await leadCaptureAndResponsePrompt(finalInput);
