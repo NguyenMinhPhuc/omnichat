@@ -13,38 +13,36 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // If auth is not loading and there's a user, check their role.
     if (!loading && user) {
       const checkRoleAndRedirect = async () => {
         const userDocRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          // If the user is an admin, redirect them to the admin dashboard.
           if (userData.role === 'admin') {
             router.push('/admin/dashboard');
           }
+        } else {
+          // If user document doesn't exist for some reason, redirect to home.
+          router.push('/');
         }
       };
       checkRoleAndRedirect();
     } else if (!loading && !user) {
-        router.push('/');
+      // If auth is done and there's no user, redirect to login.
+      router.push('/');
     }
   }, [user, loading, router]);
 
+  // While loading or if user is an admin (and redirect is pending), show a loading indicator.
   if (loading || !user) {
     return <div>Loading...</div>; // Or a loading spinner
   }
-  
-  // Regular users will see this
-  const userDocRef = user ? doc(db, 'users', user.uid) : null;
-  if (userDocRef) {
-      getDoc(userDocRef).then(doc => {
-          if (doc.exists() && doc.data().role === 'admin') {
-              // This is an admin, but the redirect hasn't happened yet.
-              // Show loading to prevent flicker of the user dashboard.
-              return <div>Loading...</div>;
-          }
-      })
-  }
 
+  // Only regular users will see the main Dashboard component.
+  // We can add an extra check here to prevent flashing the user dashboard for admins.
+  // However, the useEffect handles the primary redirection logic.
   return <Dashboard />;
 }
