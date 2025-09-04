@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from './ui/textarea';
+import MarkdownToolbar from './MarkdownToolbar';
 
 
 export default function Profile() {
@@ -47,6 +48,8 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [knowledgeBase, setKnowledgeBase] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const knowledgeTextareaRef = useRef<HTMLTextAreaElement>(null);
+
 
   useEffect(() => {
     if (!loading && !user) {
@@ -83,7 +86,7 @@ export default function Profile() {
         await updateDoc(userDocRef, updateData);
 
         // Also update profile in Firebase Auth
-        await updateAuthProfile(user, {
+        await updateAuthProfile(auth.currentUser!, {
             displayName,
             photoURL: avatarUrl,
         });
@@ -284,9 +287,15 @@ export default function Profile() {
                             <CardDescription>
                                 Provide some background information for the AI. This can be about you, your company, or any general context you want the chatbot to know.
                             </CardDescription>
+                            <MarkdownToolbar 
+                                textareaRef={knowledgeTextareaRef}
+                                currentValue={knowledgeBase}
+                                onValueChange={setKnowledgeBase}
+                            />
                             <Textarea 
                                 id="knowledgeBase" 
-                                className="h-32"
+                                ref={knowledgeTextareaRef}
+                                className="h-32 rounded-t-none"
                                 value={knowledgeBase}
                                 onChange={(e) => setKnowledgeBase(e.target.value)}
                                 placeholder="e.g., OmniChat is a leading provider of AI chatbot solutions..."

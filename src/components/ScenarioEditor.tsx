@@ -1,16 +1,18 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle, Trash2, GripVertical, Save, CornerDownRight, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { updateScenario } from '@/app/actions';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import MarkdownToolbar from './MarkdownToolbar';
+import { Label } from './ui/label';
 
 export interface ScenarioItem {
   id: string;
@@ -23,6 +25,71 @@ interface ScenarioEditorProps {
   initialScenario: ScenarioItem[];
   setScenario: React.Dispatch<React.SetStateAction<ScenarioItem[]>>;
 }
+
+interface RenderItemProps {
+  item: ScenarioItem;
+  level: number;
+}
+
+const DraggableScenarioItem: React.FC<RenderItemProps & { 
+    handleInputChange: (id: string, field: 'question' | 'answer', value: string) => void;
+    handleAddItem: (parentId: string | null) => void;
+    handleRemoveItem: (id: string) => void;
+    children: React.ReactNode;
+}> = ({ item, level, handleInputChange, handleAddItem, handleRemoveItem, children }) => {
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const id = `answer-textarea-${item.id}`;
+    
+    return (
+        <div className="ml-4" style={{ marginLeft: `${level * 2}rem` }}>
+            <Card className="mb-4 relative overflow-visible">
+                {level > 0 && <CornerDownRight className="absolute -left-6 top-10 h-6 w-6 text-muted-foreground" />}
+                <CardContent className="pt-6">
+                    <div className="flex items-start gap-4">
+                    <GripVertical className="h-8 w-8 text-muted-foreground mt-8 cursor-grab" />
+                    <div className="flex-1 space-y-4">
+                        <div>
+                        <Label htmlFor={`question-${item.id}`}>Question</Label>
+                        <Input
+                            id={`question-${item.id}`}
+                            placeholder="e.g., What are your opening hours?"
+                            value={item.question}
+                            onChange={e => handleInputChange(item.id, 'question', e.target.value)}
+                        />
+                        </div>
+                        <div>
+                        <Label htmlFor={id}>Answer</Label>
+                        <MarkdownToolbar
+                            textareaRef={textareaRef}
+                            currentValue={item.answer}
+                            onValueChange={(value) => handleInputChange(item.id, 'answer', value)}
+                         />
+                        <Textarea
+                            id={id}
+                            ref={textareaRef}
+                            placeholder="e.g., We are open from 9 AM to 5 PM, Monday to Friday."
+                            value={item.answer}
+                            onChange={e => handleInputChange(item.id, 'answer', e.target.value)}
+                            className="rounded-t-none"
+                        />
+                        </div>
+                        <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleAddItem(item.id)}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Follow-up
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Remove
+                        </Button>
+                        </div>
+                    </div>
+                    </div>
+                </CardContent>
+            </Card>
+            {children}
+        </div>
+    )
+}
+
 
 export default function ScenarioEditor({ initialScenario, setScenario }: ScenarioEditorProps) {
   const [localScenario, setLocalScenario] = useState<ScenarioItem[]>(initialScenario);
@@ -80,9 +147,13 @@ export default function ScenarioEditor({ initialScenario, setScenario }: Scenari
       return;
     }
     setIsSaving(true);
-    const result = await updateScenario(user.uid, localScenario);
+    // Filter out empty questions before saving
+    const validScenario = localScenario.filter(item => item.question.trim() !== '');
+    const result = await updateScenario(user.uid, validScenario);
+
     if (result.success) {
-      setScenario(localScenario);
+      setScenario(validScenario);
+      setLocalScenario(validScenario);
       toast({ title: "Success", description: "Scenario saved successfully." });
     } else {
       toast({ title: "Error", description: result.message, variant: "destructive" });
@@ -93,43 +164,16 @@ export default function ScenarioEditor({ initialScenario, setScenario }: Scenari
   const renderItems = (parentId: string | null, level = 0) => {
     const items = scenarioMap.get(parentId || 'root') || [];
     return items.map(item => (
-      <div key={item.id} className="ml-4" style={{ marginLeft: `${level * 2}rem` }}>
-        <Card className="mb-4 relative overflow-visible">
-            {level > 0 && <CornerDownRight className="absolute -left-6 top-10 h-6 w-6 text-muted-foreground" />}
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <GripVertical className="h-8 w-8 text-muted-foreground mt-2 cursor-grab" />
-              <div className="flex-1 space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Question</label>
-                  <Input
-                    placeholder="e.g., What are your opening hours?"
-                    value={item.question}
-                    onChange={e => handleInputChange(item.id, 'question', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Answer</label>
-                  <Textarea
-                    placeholder="e.g., We are open from 9 AM to 5 PM, Monday to Friday."
-                    value={item.answer}
-                    onChange={e => handleInputChange(item.id, 'answer', e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => handleAddItem(item.id)}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Follow-up
-                  </Button>
-                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Remove
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        {renderItems(item.id, level + 1)}
-      </div>
+        <DraggableScenarioItem
+            key={item.id}
+            item={item}
+            level={level}
+            handleInputChange={handleInputChange}
+            handleAddItem={handleAddItem}
+            handleRemoveItem={handleRemoveItem}
+        >
+            {renderItems(item.id, level + 1)}
+        </DraggableScenarioItem>
     ));
   };
 
