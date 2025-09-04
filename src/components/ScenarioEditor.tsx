@@ -161,8 +161,10 @@ export default function ScenarioEditor({ initialScenario, setScenario }: Scenari
   }, [localScenario]);
 
   const handleAddItem = (parentId: string | null = null) => {
+    // Generate a simple unique ID on the client side to avoid hydration errors.
+    const newId = `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const newItem: ScenarioItem = {
-      id: crypto.randomUUID(),
+      id: newId,
       question: '',
       answer: '',
       parentId,
@@ -251,4 +253,3 @@ export default function ScenarioEditor({ initialScenario, setScenario }: Scenari
     </div>
   );
 }
-
