@@ -18,7 +18,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
   const [cssCode, setCssCode] = useState('');
   const [htmlCode, setHtmlCode] = useState('');
   const [jsCode, setJsCode] = useState('');
-  const [embedScript, setEmbedScript] = useState('');
+  const [fullHtmlCode, setFullHtmlCode] = useState('');
 
   useEffect(() => {
     if (typeof window === 'undefined' || !chatbotId) {
@@ -107,6 +107,36 @@ if (chatToggle && chatBox) {
 }
     `;
     setJsCode(jsSnippet.trim());
+    
+    const fullCode = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniChat Demo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+        }
+        ${cssSnippet.trim()}
+    </style>
+</head>
+<body>
+    <h1>My Website</h1>
+    <p>This is a demo page with the OmniChat bubble embedded.</p>
+
+    ${htmlSnippet.trim()}
+
+    <script>
+        ${jsSnippet.trim()}
+    <\/script>
+</body>
+</html>
+    `;
+    setFullHtmlCode(fullCode.trim());
+
 
   }, [chatbotId]);
 
@@ -184,6 +214,29 @@ if (chatToggle && chatBox) {
               className="absolute top-2 right-2 h-7 w-7"
               onClick={() => copyToClipboard(jsCode)}
               disabled={!jsCode}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="full-html-code" className='text-base'>Step 4: Complete Example (All-in-One)</Label>
+           <p className="text-sm text-muted-foreground mb-2">
+            For a quick start, you can use this complete HTML file. Just copy, paste, and save it as an `.html` file.
+          </p>
+          <div className="relative">
+            <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
+              <code>
+                {fullHtmlCode || 'Loading...'}
+              </code>
+            </pre>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 h-7 w-7"
+              onClick={() => copyToClipboard(fullHtmlCode)}
+              disabled={!fullHtmlCode}
             >
               <Copy className="h-4 w-4" />
             </Button>
