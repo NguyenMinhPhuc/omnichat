@@ -1,8 +1,8 @@
 
 'use server';
 
-import {ai} from '@/ai/genkit';
-import {googleAI, gemini15Flash, gemini15Pro} from '@genkit-ai/googleai';
+import { ai } from '@/ai/genkit';
+import { googleAI, gemini15Flash, gemini15Pro } from '@genkit-ai/googleai';
 import {
   IntelligentAIResponseInput,
   IntelligentAIResponseOutput,
@@ -75,9 +75,9 @@ const intelligentAIResponseFlowInternal = ai.defineFlow(
         prompt: basePrompt,
       },
     );
-      
+
     // Call the defined prompt directly. Genkit will handle the generation and schema enforcement.
-    const {output} = await leadCaptureAndResponsePrompt(finalInput);
+    const { output } = await leadCaptureAndResponsePrompt(finalInput);
 
     if (!output) {
       // This provides a more specific error message if the AI model fails to generate output.

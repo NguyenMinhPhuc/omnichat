@@ -70,8 +70,8 @@ const getCssCode = () => `
 `.trim();
 
 const getHtmlCode = (chatbotId: string) => {
-    const origin = 'http://omnichat.fitlhu.com';
-    return `
+  const origin = 'https://omnichat.fitlhu.com';
+  return `
 <!-- Container for the chat window -->
 <div class="chat-box" id="omnichat-box">
   <div id="omnichat-container" style="width: 100%; height: 100%;">
@@ -111,7 +111,7 @@ if (chatToggle && chatBox) {
 
 export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
   const { toast } = useToast();
-  
+
   // No need for useEffect or useState for this static content
   const cssCode = getCssCode();
   const htmlCode = getHtmlCode(chatbotId);
@@ -181,7 +181,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
         </div>
         <div>
           <Label htmlFor="html-code" className='text-base'>Step 2: Add the HTML</Label>
-           <p className="text-sm text-muted-foreground mb-2">
+          <p className="text-sm text-muted-foreground mb-2">
             Paste this HTML snippet just before the closing `&lt;/body&gt;` tag of your page.
           </p>
           <div className="relative">
@@ -202,7 +202,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
         </div>
         <div>
           <Label htmlFor="js-code" className='text-base'>Step 3: Add the JavaScript</Label>
-           <p className="text-sm text-muted-foreground mb-2">
+          <p className="text-sm text-muted-foreground mb-2">
             Add this JavaScript code in a `&lt;script&gt;` tag after the HTML from Step 2.
           </p>
           <div className="relative">
@@ -224,7 +224,7 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
 
         <div>
           <Label htmlFor="full-html-code" className='text-base'>Step 4: Complete Example (All-in-One)</Label>
-           <p className="text-sm text-muted-foreground mb-2">
+          <p className="text-sm text-muted-foreground mb-2">
             For a quick start, you can use this complete HTML file. Just copy, paste, and save it as an `.html` file.
           </p>
           <div className="relative">
@@ -245,16 +245,16 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
         </div>
 
         <Alert>
-            <Info className="h-4 w-4" />
-            <AlertTitle>Important: Testing Locally</AlertTitle>
-            <AlertDescription>
-                <p className="mb-2">
-                    Due to browser security policies, opening your HTML file directly from your computer (e.g., `file:///...`) will not work. You must serve the file from a local web server.
-                </p>
-                <p>
-                    An easy way is to use `npx serve`. In your terminal, navigate to the folder with your HTML file and run <code className="bg-muted px-1 py-0.5 rounded-sm font-semibold">npx serve</code>. Then open the `localhost` URL it provides.
-                </p>
-            </AlertDescription>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Important: Testing Locally</AlertTitle>
+          <AlertDescription>
+            <p className="mb-2">
+              Due to browser security policies, opening your HTML file directly from your computer (e.g., `file:///...`) will not work. You must serve the file from a local web server.
+            </p>
+            <p>
+              An easy way is to use `npx serve`. In your terminal, navigate to the folder with your HTML file and run <code className="bg-muted px-1 py-0.5 rounded-sm font-semibold">npx serve</code>. Then open the `localhost` URL it provides.
+            </p>
+          </AlertDescription>
         </Alert>
 
       </CardContent>
