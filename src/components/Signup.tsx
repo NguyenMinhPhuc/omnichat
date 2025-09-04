@@ -33,6 +33,7 @@ export default function Signup() {
         role: 'user', // Default role
         status: 'pending', // Default status is now pending
         avatarUrl: null,
+        geminiApiKey: '', // Initialize empty geminiApiKey
         customization: {
           primaryColor: '#29ABE2',
           backgroundColor: '#F0F8FF',

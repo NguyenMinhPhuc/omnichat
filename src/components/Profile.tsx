@@ -25,7 +25,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code, Key } from 'lucide-react';
+import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code, KeyRound } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -301,7 +301,7 @@ export default function Profile() {
                   </Card>
                   <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Key /> Gemini API Key</CardTitle>
+                        <CardTitle className="flex items-center gap-2"><KeyRound /> Gemini API Key</CardTitle>
                         <CardDescription>Provide your own Google AI Gemini API key to be used for your chatbot.</CardDescription>
                     </CardHeader>
                     <CardContent>
