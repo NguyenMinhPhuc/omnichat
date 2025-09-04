@@ -5,14 +5,14 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound } from 'lucide-react';
+import { Bot, LogOut, ShieldCheck, Trash2, User, Users, KeyRound, MessageSquare } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -59,6 +59,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Skeleton } from './ui/skeleton';
 
 interface UserData {
   id: string;
@@ -69,6 +70,7 @@ interface UserData {
   status: 'active' | 'pending' | 'banned';
   geminiApiKey?: string;
   canManageApiKey?: boolean;
+  chatCount?: number;
 }
 
 export default function AdminDashboard() {
@@ -78,6 +80,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
   const [displayName, setDisplayName] = useState('');
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
   // State for API Key management dialog
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
@@ -97,21 +100,35 @@ export default function AdminDashboard() {
             const userData = userDoc.data();
             setUserRole(userData.role);
             setDisplayName(userData.displayName || '');
-            fetchUsers();
+            fetchUsersAndChatCounts();
          }
       });
     }
   }, [user, loading, router]);
   
-  const fetchUsers = async () => {
+  const fetchUsersAndChatCounts = async () => {
+    setIsLoadingUsers(true);
     try {
         const usersCollection = collection(db, 'users');
         const userSnapshot = await getDocs(usersCollection);
-        const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserData));
+        const userListPromises = userSnapshot.docs.map(async (userDoc) => {
+            const userData = { id: userDoc.id, ...userDoc.data() } as UserData;
+            
+            // Fetch chat count for each user
+            const chatsQuery = query(collection(db, 'chats'), where('chatbotId', '==', userDoc.id));
+            const countSnapshot = await getCountFromServer(chatsQuery);
+            userData.chatCount = countSnapshot.data().count;
+
+            return userData;
+        });
+
+        const userList = await Promise.all(userListPromises);
         setUsers(userList);
     } catch (error) {
         console.error("Error fetching users:", error);
         toast({ title: 'Error', description: 'Could not fetch user data.', variant: 'destructive'});
+    } finally {
+        setIsLoadingUsers(false);
     }
   };
   
@@ -134,7 +151,7 @@ export default function AdminDashboard() {
         await deleteDoc(doc(db, "users", userId));
         // Note: Deleting from Firebase Auth requires a server-side environment (e.g., Cloud Functions)
         // This implementation only deletes the user from Firestore.
-        fetchUsers();
+        fetchUsersAndChatCounts();
         toast({ title: 'User Deleted', description: 'User has been removed from Firestore.' });
     } catch (error: any) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -271,10 +288,29 @@ export default function AdminDashboard() {
               </DropdownMenu>
           </div>
         </header>
-        <main className="container mx-auto p-4 sm:p-6 lg:p-8">
+        <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingUsers ? (
+                            <Skeleton className="h-8 w-1/4" />
+                        ) : (
+                            <div className="text-2xl font-bold">{users.length}</div>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                            All registered users in the system
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Users /> User Management</CardTitle>
+               <CardDescription>View, manage users and their permissions.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -284,121 +320,141 @@ export default function AdminDashboard() {
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Permissions</TableHead>
+                    <TableHead>Chat History</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                             <AvatarImage src={u.avatarUrl || ''} alt={u.displayName} />
-                            <AvatarFallback>{u.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{u.displayName}</div>
-                            <div className="text-sm text-muted-foreground">{u.email}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                         <div className="flex items-center gap-2">
-                            <Select value={u.role} onValueChange={(value: 'admin' | 'user') => handleRoleChange(u.id, value)} disabled={u.id === user.uid}>
+                  {isLoadingUsers ? (
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell><Skeleton className="h-10 w-48" /></TableCell>
+                            <TableCell><Skeleton className="h-10 w-28" /></TableCell>
+                            <TableCell><Skeleton className="h-10 w-28" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-12" /></TableCell>
+                            <TableCell><Skeleton className="h-10 w-24" /></TableCell>
+                        </TableRow>
+                      ))
+                  ) : (
+                    users.map((u) => (
+                        <TableRow key={u.id}>
+                        <TableCell>
+                            <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                                <AvatarImage src={u.avatarUrl || ''} alt={u.displayName} />
+                                <AvatarFallback>{u.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <div className="font-medium">{u.displayName}</div>
+                                <div className="text-sm text-muted-foreground">{u.email}</div>
+                            </div>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex items-center gap-2">
+                                <Select value={u.role} onValueChange={(value: 'admin' | 'user') => handleRoleChange(u.id, value)} disabled={u.id === user.uid}>
+                                <SelectTrigger className="w-[120px]">
+                                    <SelectValue placeholder="Select role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="user">User</SelectItem>
+                                </SelectContent>
+                                </Select>
+                                {u.geminiApiKey && <Badge variant="secondary" className="whitespace-nowrap">API Key</Badge>}
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <Select value={u.status} onValueChange={(value: 'active' | 'pending' | 'banned') => handleStatusChange(u.id, value)} disabled={u.id === user.uid}>
                             <SelectTrigger className="w-[120px]">
-                                <SelectValue placeholder="Select role" />
+                                <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="active"><Badge className="bg-green-500 hover:bg-green-600">Active</Badge></SelectItem>
+                                <SelectItem value="pending"><Badge variant="secondary">Pending</Badge></SelectItem>
+                                <SelectItem value="banned"><Badge variant="destructive">Banned</Badge></SelectItem>
                             </SelectContent>
                             </Select>
-                            {u.geminiApiKey && <Badge variant="secondary" className="whitespace-nowrap">API Key</Badge>}
-                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select value={u.status} onValueChange={(value: 'active' | 'pending' | 'banned') => handleStatusChange(u.id, value)} disabled={u.id === user.uid}>
-                          <SelectTrigger className="w-[120px]">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                             <SelectItem value="active"><Badge className="bg-green-500 hover:bg-green-600">Active</Badge></SelectItem>
-                             <SelectItem value="pending"><Badge variant="secondary">Pending</Badge></SelectItem>
-                             <SelectItem value="banned"><Badge variant="destructive">Banned</Badge></SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className='flex items-center space-x-2'>
-                                    <Switch
-                                        id={`api-key-permission-${u.id}`}
-                                        checked={u.canManageApiKey}
-                                        onCheckedChange={(checked) => handlePermissionChange(u.id, checked)}
-                                        disabled={u.id === user.uid}
-                                    />
-                                    <Label htmlFor={`api-key-permission-${u.id}`} className="text-sm text-muted-foreground">API Key</Label>
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Allow user to add/edit their own Gemini API Key.</p>
-                            </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                           <Button variant="outline" size="icon" onClick={() => handleManageApiKey(u)}>
+                        </TableCell>
+                        <TableCell>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className='flex items-center space-x-2'>
+                                        <Switch
+                                            id={`api-key-permission-${u.id}`}
+                                            checked={u.canManageApiKey}
+                                            onCheckedChange={(checked) => handlePermissionChange(u.id, checked)}
+                                            disabled={u.id === user.uid}
+                                        />
+                                        <Label htmlFor={`api-key-permission-${u.id}`} className="text-sm text-muted-foreground">API Key</Label>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Allow user to add/edit their own Gemini API Key.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                           <div className="flex items-center gap-1">
+                             <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                             <span className="font-medium">{u.chatCount ?? 0}</span>
+                           </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                            <Button variant="outline" size="icon" onClick={() => handleManageApiKey(u)}>
                                 <KeyRound className="h-4 w-4" />
                                 <span className="sr-only">Manage API Key</span>
                             </Button>
 
-                           <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="icon" disabled={u.id === user.uid}>
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail-key"><path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="M15.5 22a2.5 2.5 0 0 0 2.5-2.5V17a2.5 2.5 0 0 0-5 0v2.5a2.5 0 0 0 2.5 2.5Z"/><path d="M20 17h2"/></svg>
-                                      <span className="sr-only">Reset Password</span>
-                                  </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                          This will send a password reset link to {u.email}. The user will be able to set a new password.
-                                      </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handlePasswordReset(u.email)}>
-                                          Send Email
-                                      </AlertDialogAction>
-                                  </AlertDialogFooter>
-                              </AlertDialogContent>
-                          </AlertDialog>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="icon" disabled={u.id === user.uid}>
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete User</span>
-                                </Button>
-                            </AlertDialogTrigger>
-                             <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the user's data from Firestore, but not from Firebase Authentication.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteUser(u.id)}>Continue</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" size="icon" disabled={u.id === user.uid}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail-key"><path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="M15.5 22a2.5 2.5 0 0 0 2.5-2.5V17a2.5 2.5 0 0 0-5 0v2.5a2.5 0 0 0 2.5 2.5Z"/><path d="M20 17h2"/></svg>
+                                        <span className="sr-only">Reset Password</span>
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will send a password reset link to {u.email}. The user will be able to set a new password.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handlePasswordReset(u.email)}>
+                                            Send Email
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="icon" disabled={u.id === user.uid}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete User</span>
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the user's data from Firestore, but not from Firebase Authentication.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteUser(u.id)}>Continue</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            </div>
+                        </TableCell>
+                        </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
