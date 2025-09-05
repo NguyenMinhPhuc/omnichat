@@ -309,7 +309,7 @@ export async function getUsersWithMonthlyUsage() {
       const monthlyUsageDocRef = userDoc.ref.collection('monthlyUsage').doc(monthYear);
       const monthlyUsageDoc = await monthlyUsageDocRef.get();
 
-      if (monthlyUsageDoc.exists) {
+      if (monthlyUsageDoc.exists()) {
         const usageData = monthlyUsageDoc.data();
         return {
           ...userData,
@@ -337,3 +337,5 @@ export async function getUsersWithMonthlyUsage() {
     throw new Error("Failed to fetch users with monthly usage data.");
   }
 }
+
+    
