@@ -17,8 +17,17 @@ let adminApp: App;
  */
 function getDb() {
   if (!getApps().length) {
-    // When running in a Google Cloud environment, the SDK is automatically initialized.
-    adminApp = initializeApp();
+    try {
+      // This requires the serviceAccount.json file to be present in the project root
+      const serviceAccount = require('../../serviceAccount.json');
+      adminApp = initializeApp({
+        credential: cert(serviceAccount)
+      });
+    } catch (error) {
+      console.error("Failed to initialize Firebase Admin with serviceAccount.json, falling back to default credentials.", error);
+      // Fallback for environments where service account is auto-discovered (like Google Cloud Run)
+      adminApp = initializeApp();
+    }
   } else {
     adminApp = getApps()[0]!;
   }
