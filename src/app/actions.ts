@@ -17,15 +17,8 @@ let adminApp: App;
  */
 function getDb() {
   if (!getApps().length) {
-    try {
-      const serviceAccount = require('../../serviceAccount.json');
-      adminApp = initializeApp({
-        credential: cert(serviceAccount),
-      });
-    } catch (error: any) {
-      console.error('Failed to initialize Firebase Admin SDK:', error.message);
-      throw new Error(`Firebase Admin SDK initialization failed: ${error.message}. Make sure 'serviceAccount.json' is present and correctly formatted in the root directory.`);
-    }
+    // When running in a Google Cloud environment, the SDK is automatically initialized.
+    adminApp = initializeApp();
   } else {
     adminApp = getApps()[0]!;
   }
@@ -277,13 +270,14 @@ export async function getUsersWithUsageData() {
     const firestore = getDb();
     const now = new Date();
     const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    const usersWithUsage = [];
-
+    
     // Step 1: Get all users
     const usersSnapshot = await firestore.collection('users').get();
     if (usersSnapshot.empty) {
       return [];
     }
+
+    const usersWithUsage = [];
 
     // Step 2: Loop through each user to get their usage data
     for (const userDoc of usersSnapshot.docs) {
