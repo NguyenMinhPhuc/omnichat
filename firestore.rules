@@ -3,36 +3,32 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user's document in Firestore has the role 'admin'
-    // This is a secure way to check roles from the rules themselves.
+    // Helper function to check if the user is an admin by looking at their document
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // A user can read and write to their own document.
-      // An admin can read and write to any user's document.
-      allow read, write: if request.auth.uid == userId || isAdmin();
+      // A user can read/write their own data. An admin can read any user's data.
+      allow read, write: if request.auth.uid == userId;
+      allow list, get: if isAdmin();
 
       // Rules for the 'monthlyUsage' subcollection
       match /monthlyUsage/{usageId} {
-        // A user can read their own usage data.
-        // An admin can read any user's usage data.
+        // A user can read their own usage data. An admin can read anyone's usage data.
         allow read: if request.auth.uid == userId || isAdmin();
       }
     }
 
     // Rules for the 'chats' collection
     match /chats/{chatId} {
-      // The server-side action creates new chats, so anonymous users don't need 'create' permission.
-      // Logged-in users (the chatbot owners) can read the chats associated with their chatbotId (which is their UID).
-      // Admins can read any chat session for moderation or review.
+      // A user can read their own chat sessions (where they are the chatbot owner).
+      // An admin can read any chat session.
       allow read: if request.auth.uid == resource.data.chatbotId || isAdmin();
-
-      // No one can write directly to the chats collection from the client-side except for updates from the server.
-      // We allow server-side actions to update the message history.
-      allow write: if false; // Secure by default. All writes must come from the backend.
+      // Writing to chats is handled by server-side logic with Admin credentials,
+      // so no direct client write access is needed.
+      allow write: if false;
     }
   }
 }
