@@ -283,6 +283,9 @@ export async function getUsersWithUsageData() {
 
     // Step 1: Get all users
     const usersSnapshot = await firestore.collection('users').get();
+    if (usersSnapshot.empty) {
+      return [];
+    }
     const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     // Step 2: Create an array of promises, where each promise fetches usage for one user
