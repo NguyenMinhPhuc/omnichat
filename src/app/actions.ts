@@ -13,14 +13,12 @@ let adminApp: App | null = null;
 
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
- * Ensures that initialization only happens once by reading from a physical JSON file.
+ * Ensures that initialization only happens once, handling Next.js HMR correctly.
  */
 function getDb() {
   if (getApps().length === 0) {
     try {
-      // Use require to directly read the JSON file. This is more robust than env variables for multi-line keys.
       const serviceAccount = require('../../serviceAccount.json');
-      
       adminApp = initializeApp({
         credential: cert(serviceAccount),
       });
@@ -29,10 +27,12 @@ function getDb() {
       throw new Error(`Firebase Admin SDK initialization failed: ${error.message}. Make sure 'serviceAccount.json' is present and correctly formatted in the root directory.`);
     }
   } else {
+    // This ensures we get the existing app instance, crucial for HMR environments.
     adminApp = getApps()[0];
   }
   
-  if (!db) {
+  // Initialize Firestore instance if it hasn't been already.
+  if (!db || db.app !== adminApp) {
      db = getFirestore(adminApp!);
   }
   return db;
@@ -306,5 +306,4 @@ export async function getUsersWithUsageData() {
     throw new Error("Failed to fetch users with monthly usage data.");
   }
 }
-
     
