@@ -102,6 +102,60 @@ export async function getAIResponse({
       knowledgeBase: combinedKnowledgeBase,
       apiKey: userApiKey,
     });
+    console.log('Attempting to track usage. Result:', result);
+    // --- Start: Usage Tracking Logic ---
+    if (result.totalTokens !== undefined && result.chatRequestCount !== undefined) {
+      const firestore = getDb(); // Re-get db instance if needed, or ensure it's accessible
+      const now = new Date();
+      const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+
+      const monthlyUsageRef = firestore.collection('users').doc(userId).collection('monthlyUsage').doc(monthYear);
+      console.log(`Tracking usage for user ${userId} in ${monthYear}. Path: users/${userId}/monthlyUsage/${monthYear}`);
+      console.log('Usage data:', { 
+        totalTokens: result.totalTokens,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        chatRequests: result.chatRequestCount,
+      });
+
+      try {
+        await monthlyUsageRef.set({
+          totalTokens: FieldValue.increment(result.totalTokens),
+          inputTokens: FieldValue.increment(result.inputTokens || 0),
+          outputTokens: FieldValue.increment(result.outputTokens || 0),
+          chatRequests: FieldValue.increment(result.chatRequestCount),
+          lastUpdated: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        console.log('Monthly usage updated successfully for user', userId);
+      } catch (usageError) {
+        console.error('Error updating monthly usage for user', userId, usageError);
+        // Do not re-throw, as AI response is more critical than usage tracking
+      }
+    }
+    // --- End: Usage Tracking Logic ---
+
+    // --- Start: Usage Tracking Logic --- 
+    if (result.totalTokens !== undefined && result.chatRequestCount !== undefined) {
+      const firestore = getDb(); // Re-get db instance if needed, or ensure it's accessible
+      const now = new Date();
+      const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+
+      const monthlyUsageRef = firestore.collection('users').doc(userId).collection('monthlyUsage').doc(monthYear);
+
+      try {
+        await monthlyUsageRef.set({
+          totalTokens: FieldValue.increment(result.totalTokens),
+          inputTokens: FieldValue.increment(result.inputTokens || 0),
+          outputTokens: FieldValue.increment(result.outputTokens || 0),
+          chatRequests: FieldValue.increment(result.chatRequestCount),
+          lastUpdated: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      } catch (usageError) {
+        console.error('Error updating monthly usage for user', userId, usageError);
+        // Do not re-throw, as AI response is more critical than usage tracking
+      }
+    }
+    // --- End: Usage Tracking Logic --- 
 
     return result;
   } catch (error) {
@@ -207,6 +261,7 @@ export async function updateKnowledgeSource(userId: string, updatedSource: Knowl
     }
 }
 
+
 /**
  * Deletes a knowledge source for a user.
  */
@@ -236,4 +291,49 @@ export async function deleteKnowledgeSource(userId: string, sourceId: string): P
         const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
         return { success: false, message: `Failed to delete knowledge source: ${errorMessage}` };
     }
+}
+
+export async function getUsersWithMonthlyUsage() {
+  try {
+    const firestore = getDb();
+    const usersCollectionRef = firestore.collection('users');
+    const usersSnapshot = await usersCollectionRef.get();
+
+    const now = new Date();
+    const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+
+    const usersWithUsagePromises = usersSnapshot.docs.map(async (userDoc) => {
+      const userData = { id: userDoc.id, ...userDoc.data() };
+
+      // Fetch current month's usage
+      const monthlyUsageDocRef = userDoc.ref.collection('monthlyUsage').doc(monthYear);
+      const monthlyUsageDoc = await monthlyUsageDocRef.get();
+
+      if (monthlyUsageDoc.exists) {
+        const usageData = monthlyUsageDoc.data();
+        return {
+          ...userData,
+          totalTokens: usageData?.totalTokens || 0,
+          inputTokens: usageData?.inputTokens || 0,
+          outputTokens: usageData?.outputTokens || 0,
+          chatRequests: usageData?.chatRequests || 0,
+        };
+      } else {
+        // Return user data with zero usage if no record for the current month
+        return {
+          ...userData,
+          totalTokens: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          chatRequests: 0,
+        };
+      }
+    });
+
+    const usersWithUsage = await Promise.all(usersWithUsagePromises);
+    return usersWithUsage;
+  } catch (error) {
+    console.error("Error fetching users with monthly usage:", error);
+    throw new Error("Failed to fetch users with monthly usage data.");
+  }
 }

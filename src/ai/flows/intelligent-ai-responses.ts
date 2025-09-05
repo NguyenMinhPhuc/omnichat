@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -59,6 +58,10 @@ const intelligentAIResponseFlowInternal = ai.defineFlow(
       return {
         response:
           "I'm sorry, the chatbot is not configured correctly. An API key is missing.",
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        chatRequestCount: 0,
       };
     }
 
@@ -77,15 +80,25 @@ const intelligentAIResponseFlowInternal = ai.defineFlow(
     );
 
     // Call the defined prompt directly. Genkit will handle the generation and schema enforcement.
-    const { output } = await leadCaptureAndResponsePrompt(finalInput);
+    const { output, usage } = await leadCaptureAndResponsePrompt(finalInput);
 
     if (!output) {
       // This provides a more specific error message if the AI model fails to generate output.
       return {
         response:
           "I'm sorry, the AI model failed to generate a response. Please try again.",
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        chatRequestCount: 0,
       };
     }
-    return output;
+    return {
+      ...output,
+      inputTokens: usage?.inputTokens || 0,
+      outputTokens: usage?.outputTokens || 0,
+      totalTokens: usage?.totalTokens || 0,
+      chatRequestCount: 1,
+    };
   }
 );

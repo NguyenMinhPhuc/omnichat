@@ -43,7 +43,7 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
         <div className="flex-1 space-y-4">
             {level === 0 && (
                  <div>
-                    <Label htmlFor={`question-${item.id}`}>Câu hỏi chính</Label>
+                    <Label htmlFor={`question-${item.id}`}>Main Question</Label>
                     <Input
                         id={`question-${item.id}`}
                         placeholder="e.g., What are your opening hours?"
@@ -54,7 +54,7 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
                 </div>
             )}
             <div>
-                <Label>Câu trả lời</Label>
+                <Label>Answer</Label>
                 <MarkdownEditor 
                     value={item.answer}
                     onValueChange={(value) => handleInputChange(item.id, 'answer', value)}
@@ -63,10 +63,10 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
             </div>
             <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => handleAddItem(item.id)}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Thêm câu hỏi phụ
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Follow-up Question
                 </Button>
                 <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Xóa
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </Button>
             </div>
         </div>
@@ -74,10 +74,10 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
 
     const followUpQuestionInput = (
         <div className="w-full pl-8">
-            <Label htmlFor={`question-${item.id}`} className="sr-only">Câu hỏi phụ</Label>
+            <Label htmlFor={`question-${item.id}`} className="sr-only">Follow-up Question</Label>
             <Input
                 id={`question-${item.id}`}
-                placeholder="Nhập câu hỏi phụ của người dùng..."
+                placeholder="Enter user's follow-up question..."
                 value={item.question}
                 onChange={e => handleInputChange(item.id, 'question', e.target.value)}
             />
@@ -92,7 +92,7 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
                     {followUpQuestionInput}
                     <div className="ml-8 space-y-4">
                         <div>
-                            <Label>Câu trả lời cho câu hỏi phụ</Label>
+                            <Label>Answer for follow-up question</Label>
                              <MarkdownEditor 
                                 value={item.answer}
                                 onValueChange={(value) => handleInputChange(item.id, 'answer', value)}
@@ -101,10 +101,10 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
                         </div>
                         <div className="flex gap-2">
                             <Button size="sm" variant="outline" onClick={() => handleAddItem(item.id)}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Thêm câu hỏi phụ
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Follow-up Question
                             </Button>
                              <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleRemoveItem(item.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" /> Xóa
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
                             </Button>
                         </div>
                         {children}
@@ -122,8 +122,8 @@ const DraggableScenarioItem: React.FC<RenderItemProps & {
                        <div className="flex items-center gap-4">
                             <GripVertical className="h-8 w-8 text-muted-foreground cursor-grab" />
                             <div className="text-left">
-                                <p className="font-semibold">{item.question || "Câu hỏi mới"}</p>
-                                <p className="text-xs text-muted-foreground">Nhấp để mở rộng và chỉnh sửa</p>
+                                <p className="font-semibold">{item.question || "New Question"}</p>
+                                <p className="text-xs text-muted-foreground">Click to expand and edit</p>
                             </div>
                        </div>
                     </AccordionTrigger>
@@ -233,9 +233,11 @@ export default function ScenarioEditor({ initialScenario, setScenario }: Scenari
     <div className="space-y-4">
         <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Cách hoạt động</AlertTitle>
+            <AlertTitle>How it works</AlertTitle>
             <AlertDescription>
-                Tạo một cuộc trò chuyện theo kịch bản cho chatbot của bạn. Thêm các câu hỏi gốc, sau đó là các câu hỏi phụ để xây dựng cây quyết định. Nếu người dùng hỏi điều gì không có trong kịch bản, AI sẽ tự do trả lời.
+                                <AlertDescription>
+                Create a scenario-based conversation for your chatbot. Add root questions, then follow-up questions to build a decision tree. If the user asks something not in the scenario, the AI will respond freely.
+            </AlertDescription>
             </AlertDescription>
         </Alert>
       <div>
@@ -243,11 +245,11 @@ export default function ScenarioEditor({ initialScenario, setScenario }: Scenari
       </div>
       <div className="flex justify-between items-center">
         <Button onClick={() => handleAddItem(null)}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Thêm câu hỏi gốc
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Root Question
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
             <Save className="mr-2 h-4 w-4" />
-            {isSaving ? "Đang lưu..." : "Lưu kịch bản"}
+            Save Scenario
         </Button>
       </div>
     </div>

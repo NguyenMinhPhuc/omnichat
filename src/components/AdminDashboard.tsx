@@ -72,6 +72,10 @@ interface UserData {
   geminiApiKey?: string;
   canManageApiKey?: boolean;
   chatCount?: number;
+  totalTokens?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  chatRequests?: number;
 }
 
 export default function AdminDashboard() {
@@ -115,7 +119,7 @@ export default function AdminDashboard() {
           setDisplayName(userData.displayName || '');
           
           // Only if the user is confirmed as an admin, fetch all other users.
-          await fetchUsersAndChatCounts();
+          await fetchUsersAndUsageData();
         } else {
           // If the user is not an admin or their document doesn't exist, redirect them.
           router.push('/dashboard');
@@ -132,24 +136,12 @@ export default function AdminDashboard() {
     checkAdminStatusAndFetchData();
   }, [user, loading, router, toast]);
   
-  const fetchUsersAndChatCounts = async () => {
+  const fetchUsersAndUsageData = async () => {
     setIsLoadingUsers(true);
     try {
-        const usersCollection = collection(db, 'users');
-        const userSnapshot = await getDocs(usersCollection);
-        const userListPromises = userSnapshot.docs.map(async (userDoc) => {
-            const userData = { id: userDoc.id, ...userDoc.data() } as UserData;
-            
-            // Fetch chat count for each user
-            const chatsQuery = query(collection(db, 'chats'), where('chatbotId', '==', userDoc.id));
-            const countSnapshot = await getCountFromServer(chatsQuery);
-            userData.chatCount = countSnapshot.data().count;
-
-            return userData;
-        });
-
-        const userList = await Promise.all(userListPromises);
-        setUsers(userList);
+        const userList = await getUsersWithMonthlyUsage();
+        console.log('Fetched user list with usage:', userList);
+        setUsers(userList as UserData[]); // Cast to UserData[]
     } catch (error) {
         console.error("Error fetching users:", error);
         toast({ title: 'Error', description: 'Could not fetch user data.', variant: 'destructive'});
@@ -171,6 +163,7 @@ export default function AdminDashboard() {
   }, [users]);
   
   const filteredUsers = useMemo(() => {
+    console.log('Filtered users for display:', users);
     if (!searchTerm) {
         return users;
     }
@@ -427,6 +420,8 @@ export default function AdminDashboard() {
                     <TableHead>Status</TableHead>
                     <TableHead>Permissions</TableHead>
                     <TableHead>Chat History</TableHead>
+                    <TableHead>Tokens (Monthly)</TableHead>
+                    <TableHead>Requests (Monthly)</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -513,6 +508,16 @@ export default function AdminDashboard() {
                              <span className="font-medium">{u.chatCount ?? 0}</span>
                            </div>
                         </TableCell>
+                        <TableCell>
+                           <div className="flex items-center gap-1">
+                             <span className="font-medium">{u.totalTokens ?? 0}</span>
+                           </div>
+                        </TableCell>
+                        <TableCell>
+                           <div className="flex items-center gap-1">
+                             <span className="font-medium">{u.chatRequests ?? 0}</span>
+                           </div>
+                        </TableCell>
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                             <Button variant="outline" size="icon" onClick={() => handleManageApiKey(u)}>
@@ -568,7 +573,7 @@ export default function AdminDashboard() {
                     ))
                   ) : (
                     <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
+                        <TableCell colSpan={8} className="h-24 text-center">
                             No users found.
                         </TableCell>
                     </TableRow>
