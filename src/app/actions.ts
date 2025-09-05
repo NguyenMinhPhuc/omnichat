@@ -9,14 +9,14 @@ import type { ScenarioItem } from '@/components/ScenarioEditor';
 import type { KnowledgeSource } from '@/components/Dashboard';
 
 let db: Firestore;
-let adminApp: App | null = null;
+let adminApp: App;
 
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
  * Ensures that initialization only happens once, handling Next.js HMR correctly.
  */
 function getDb() {
-  if (getApps().length === 0) {
+  if (!getApps().length) {
     try {
       const serviceAccount = require('../../serviceAccount.json');
       adminApp = initializeApp({
@@ -27,14 +27,11 @@ function getDb() {
       throw new Error(`Firebase Admin SDK initialization failed: ${error.message}. Make sure 'serviceAccount.json' is present and correctly formatted in the root directory.`);
     }
   } else {
-    // This ensures we get the existing app instance, crucial for HMR environments.
-    adminApp = getApps()[0];
+    adminApp = getApps()[0]!;
   }
   
-  // Initialize Firestore instance if it hasn't been already.
-  if (!db || db.app !== adminApp) {
-     db = getFirestore(adminApp!);
-  }
+  // Always get a new Firestore instance if it's not initialized
+  db = getFirestore(adminApp);
   return db;
 }
 
@@ -292,7 +289,7 @@ export async function getUsersWithUsageData() {
     for (const userDoc of usersSnapshot.docs) {
       const userData = { id: userDoc.id, ...userDoc.data() };
       
-      const monthlyUsageDocRef = userDoc.ref.collection('monthlyUsage').doc(monthYear);
+      const monthlyUsageDocRef = firestore.collection('users').doc(userDoc.id).collection('monthlyUsage').doc(monthYear);
       const monthlyUsageDoc = await monthlyUsageDocRef.get();
 
       if (monthlyUsageDoc.exists()) {
