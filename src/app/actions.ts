@@ -104,21 +104,34 @@ export async function getAIResponse({
     });
 
     // --- Start: Usage Tracking Logic ---
-    if (result.totalTokens !== undefined && result.chatRequestCount !== undefined) {
-      const firestore = getDb(); // Re-get db instance if needed, or ensure it's accessible
+    if (result.totalTokens && result.chatRequestCount) {
+      const firestoreDb = getDb();
       const now = new Date();
       const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
 
-      const monthlyUsageRef = firestore.collection('users').doc(userId).collection('monthlyUsage').doc(monthYear);
+      const monthlyUsageRef = firestoreDb.collection('users').doc(userId).collection('monthlyUsage').doc(monthYear);
 
       try {
-        await monthlyUsageRef.set({
-          totalTokens: FieldValue.increment(result.totalTokens),
-          inputTokens: FieldValue.increment(result.inputTokens || 0),
-          outputTokens: FieldValue.increment(result.outputTokens || 0),
-          chatRequests: FieldValue.increment(result.chatRequestCount),
-          lastUpdated: FieldValue.serverTimestamp(),
-        }, { merge: true });
+        await firestoreDb.runTransaction(async (transaction) => {
+            const doc = await transaction.get(monthlyUsageRef);
+            if (!doc.exists) {
+                transaction.set(monthlyUsageRef, {
+                    totalTokens: result.totalTokens,
+                    inputTokens: result.inputTokens || 0,
+                    outputTokens: result.outputTokens || 0,
+                    chatRequests: result.chatRequestCount,
+                    lastUpdated: FieldValue.serverTimestamp(),
+                });
+            } else {
+                transaction.update(monthlyUsageRef, {
+                    totalTokens: FieldValue.increment(result.totalTokens!),
+                    inputTokens: FieldValue.increment(result.inputTokens || 0),
+                    outputTokens: FieldValue.increment(result.outputTokens || 0),
+                    chatRequests: FieldValue.increment(result.chatRequestCount!),
+                    lastUpdated: FieldValue.serverTimestamp(),
+                });
+            }
+        });
       } catch (usageError) {
         console.error('Error updating monthly usage for user', userId, usageError);
         // Do not re-throw, as AI response is more critical than usage tracking
@@ -270,27 +283,35 @@ export async function getUsersWithUsageData() {
 
     const now = new Date();
     const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+    
+    // Step 1: Get all user data
+    const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    const usersWithUsagePromises = usersSnapshot.docs.map(async (userDoc) => {
-      const userData = { id: userDoc.id, ...userDoc.data() };
-
-      // Fetch current month's usage
+    // Step 2: Create an array of promises to fetch usage data for each user
+    const usagePromises = usersSnapshot.docs.map(userDoc => {
       const monthlyUsageDocRef = userDoc.ref.collection('monthlyUsage').doc(monthYear);
-      const monthlyUsageDoc = await monthlyUsageDocRef.get();
+      return monthlyUsageDocRef.get();
+    });
 
-      if (monthlyUsageDoc.exists()) {
-        const usageData = monthlyUsageDoc.data();
+    // Step 3: Await all usage data promises
+    const usageSnapshots = await Promise.all(usagePromises);
+
+    // Step 4: Map users and their usage data together
+    const usersWithUsage = usersData.map((user, index) => {
+      const usageDoc = usageSnapshots[index];
+      if (usageDoc.exists()) {
+        const usageData = usageDoc.data();
         return {
-          ...userData,
+          ...user,
           totalTokens: usageData?.totalTokens || 0,
           inputTokens: usageData?.inputTokens || 0,
           outputTokens: usageData?.outputTokens || 0,
           chatRequests: usageData?.chatRequests || 0,
         };
       } else {
-        // Return user data with zero usage if no record for the current month
+        // If no usage doc, return user with zero usage
         return {
-          ...userData,
+          ...user,
           totalTokens: 0,
           inputTokens: 0,
           outputTokens: 0,
@@ -299,11 +320,13 @@ export async function getUsersWithUsageData() {
       }
     });
 
-    const usersWithUsage = await Promise.all(usersWithUsagePromises);
     return usersWithUsage;
   } catch (error) {
     console.error("Error fetching users with monthly usage:", error);
+    // It's better to throw the error so the calling function knows something went wrong.
     throw new Error("Failed to fetch users with monthly usage data.");
   }
 }
+    
+
     

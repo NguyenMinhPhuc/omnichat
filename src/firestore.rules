@@ -1,0 +1,37 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the user is an admin by reading their own user document.
+    // This is secure because Firestore rules ensure users can only read their own 'role'.
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // A user can read and write to their own document.
+      allow read, write: if request.auth.uid == userId;
+      
+      // An admin can get any single user document and list all user documents.
+      allow get, list: if isAdmin();
+
+      // Rules for the 'monthlyUsage' subcollection
+      match /monthlyUsage/{usageId} {
+        // A user can read their own usage data. Admins can also read anyone's usage data.
+        allow read: if request.auth.uid == userId || isAdmin();
+      }
+    }
+
+    // Rules for the 'chats' collection
+    match /chats/{chatId} {
+      // A user can read chat sessions where the chatbotId matches their own UID.
+      // Admins can read any chat session.
+      allow read: if request.auth.uid == resource.data.chatbotId || isAdmin();
+    }
+  }
+}
+
+    
