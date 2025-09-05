@@ -3,31 +3,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAdmin() {
-      // Check if the user making the request is an admin by looking up their role in the users collection.
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Checks if the user making the request is an administrator.
+    function isUserAdmin(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // Users can read and write to their own document.
+      // Allow users to read and write to their own document
       allow read, write: if request.auth.uid == userId;
       
-      // Admins can get (read individual docs) and list (read collections) all user documents.
-      // This is crucial for the admin dashboard to function.
-      allow get, list: if isAdmin();
-    }
-    
-    match /users/{userId}/monthlyUsage/{usageId} {
-        // Admins or the user themselves can read usage data.
-        allow read: if isAdmin() || request.auth.uid == userId;
+      // Allow admins to get and list any user document
+      allow get, list: if isUserAdmin(request.auth.uid);
+
+      // Rules for the 'monthlyUsage' subcollection
+      match /monthlyUsage/{usageId} {
+        // Allow users to read their own usage data
+        allow read: if request.auth.uid == userId;
+        // Allow admins to read anyone's usage data
+        allow read: if isUserAdmin(request.auth.uid);
+      }
     }
 
+    // Rules for the 'chats' collection
     match /chats/{chatId} {
-        // Users can create chats and read their own chat history.
-        allow read, create: if request.auth.uid == request.resource.data.chatbotId;
-        // Users can update their own ongoing chat sessions.
-        allow update: if request.auth.uid == resource.data.chatbotId;
+      // Allow users to read chat sessions that belong to them
+      allow read: if request.auth.uid == resource.data.chatbotId;
+      // Allow admins to read any chat session
+      allow read: if isUserAdmin(request.auth.uid);
     }
   }
 }
