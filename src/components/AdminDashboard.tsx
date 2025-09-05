@@ -60,6 +60,7 @@ import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Skeleton } from './ui/skeleton';
+import { getUsersWithUsageData } from '@/app/actions';
 
 interface UserData {
   id: string;
@@ -134,13 +135,12 @@ export default function AdminDashboard() {
 
     // We call the async function.
     checkAdminStatusAndFetchData();
-  }, [user, loading, router, toast]);
+  }, [user, loading]);
   
   const fetchUsersAndUsageData = async () => {
     setIsLoadingUsers(true);
     try {
-        const userList = await getUsersWithMonthlyUsage();
-        console.log('Fetched user list with usage:', userList);
+        const userList = await getUsersWithUsageData();
         setUsers(userList as UserData[]); // Cast to UserData[]
     } catch (error) {
         console.error("Error fetching users:", error);
@@ -163,7 +163,6 @@ export default function AdminDashboard() {
   }, [users]);
   
   const filteredUsers = useMemo(() => {
-    console.log('Filtered users for display:', users);
     if (!searchTerm) {
         return users;
     }
@@ -192,7 +191,7 @@ export default function AdminDashboard() {
         await deleteDoc(doc(db, "users", userId));
         // Note: Deleting from Firebase Auth requires a server-side environment (e.g., Cloud Functions)
         // This implementation only deletes the user from Firestore.
-        fetchUsersAndChatCounts();
+        fetchUsersAndUsageData();
         toast({ title: 'User Deleted', description: 'User has been removed from Firestore.' });
     } catch (error: any) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -419,7 +418,6 @@ export default function AdminDashboard() {
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Permissions</TableHead>
-                    <TableHead>Chat History</TableHead>
                     <TableHead>Tokens (Monthly)</TableHead>
                     <TableHead>Requests (Monthly)</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -427,12 +425,13 @@ export default function AdminDashboard() {
                 </TableHeader>
                 <TableBody>
                   {isLoadingUsers ? (
-                      Array.from({ length: 3 }).map((_, i) => (
+                      Array.from({ length: 5 }).map((_, i) => (
                         <TableRow key={i}>
                             <TableCell><Skeleton className="h-10 w-48" /></TableCell>
                             <TableCell><Skeleton className="h-10 w-28" /></TableCell>
                             <TableCell><Skeleton className="h-10 w-28" /></TableCell>
                             <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-12" /></TableCell>
                             <TableCell><Skeleton className="h-6 w-12" /></TableCell>
                             <TableCell className="text-right"><Skeleton className="h-10 w-24 ml-auto" /></TableCell>
                         </TableRow>
@@ -501,12 +500,6 @@ export default function AdminDashboard() {
                                     <p>Allow user to add/edit their own Gemini API Key.</p>
                                 </TooltipContent>
                             </Tooltip>
-                        </TableCell>
-                        <TableCell>
-                           <div className="flex items-center gap-1">
-                             <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                             <span className="font-medium">{u.chatCount ?? 0}</span>
-                           </div>
                         </TableCell>
                         <TableCell>
                            <div className="flex items-center gap-1">
@@ -618,3 +611,5 @@ export default function AdminDashboard() {
     </TooltipProvider>
   );
 }
+
+    

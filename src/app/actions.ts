@@ -102,7 +102,7 @@ export async function getAIResponse({
       knowledgeBase: combinedKnowledgeBase,
       apiKey: userApiKey,
     });
-    console.log('Attempting to track usage. Result:', result);
+
     // --- Start: Usage Tracking Logic ---
     if (result.totalTokens !== undefined && result.chatRequestCount !== undefined) {
       const firestore = getDb(); // Re-get db instance if needed, or ensure it's accessible
@@ -110,13 +110,6 @@ export async function getAIResponse({
       const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
 
       const monthlyUsageRef = firestore.collection('users').doc(userId).collection('monthlyUsage').doc(monthYear);
-      console.log(`Tracking usage for user ${userId} in ${monthYear}. Path: users/${userId}/monthlyUsage/${monthYear}`);
-      console.log('Usage data:', { 
-        totalTokens: result.totalTokens,
-        inputTokens: result.inputTokens,
-        outputTokens: result.outputTokens,
-        chatRequests: result.chatRequestCount,
-      });
 
       try {
         await monthlyUsageRef.set({
@@ -126,36 +119,12 @@ export async function getAIResponse({
           chatRequests: FieldValue.increment(result.chatRequestCount),
           lastUpdated: FieldValue.serverTimestamp(),
         }, { merge: true });
-        console.log('Monthly usage updated successfully for user', userId);
       } catch (usageError) {
         console.error('Error updating monthly usage for user', userId, usageError);
         // Do not re-throw, as AI response is more critical than usage tracking
       }
     }
     // --- End: Usage Tracking Logic ---
-
-    // --- Start: Usage Tracking Logic --- 
-    if (result.totalTokens !== undefined && result.chatRequestCount !== undefined) {
-      const firestore = getDb(); // Re-get db instance if needed, or ensure it's accessible
-      const now = new Date();
-      const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-
-      const monthlyUsageRef = firestore.collection('users').doc(userId).collection('monthlyUsage').doc(monthYear);
-
-      try {
-        await monthlyUsageRef.set({
-          totalTokens: FieldValue.increment(result.totalTokens),
-          inputTokens: FieldValue.increment(result.inputTokens || 0),
-          outputTokens: FieldValue.increment(result.outputTokens || 0),
-          chatRequests: FieldValue.increment(result.chatRequestCount),
-          lastUpdated: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      } catch (usageError) {
-        console.error('Error updating monthly usage for user', userId, usageError);
-        // Do not re-throw, as AI response is more critical than usage tracking
-      }
-    }
-    // --- End: Usage Tracking Logic --- 
 
     return result;
   } catch (error) {
@@ -293,7 +262,7 @@ export async function deleteKnowledgeSource(userId: string, sourceId: string): P
     }
 }
 
-export async function getUsersWithMonthlyUsage() {
+export async function getUsersWithUsageData() {
   try {
     const firestore = getDb();
     const usersCollectionRef = firestore.collection('users');
