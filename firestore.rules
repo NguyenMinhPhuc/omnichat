@@ -3,34 +3,32 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Checks if the user making the request is an administrator.
-    function isUserAdmin(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      // Checks if the requesting user's document has the 'role' field set to 'admin'
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow users to read and write to their own document
-      allow read, write: if request.auth.uid == userId;
-      
-      // Allow admins to get and list any user document
-      allow get, list: if isUserAdmin(request.auth.uid);
+      // Allow users to read their own document, and allow admins to read any user document.
+      allow read: if request.auth.uid == userId || isAdmin();
+      // Allow users to write only to their own document.
+      allow write: if request.auth.uid == userId;
 
       // Rules for the 'monthlyUsage' subcollection
       match /monthlyUsage/{usageId} {
         // Allow users to read their own usage data
-        allow read: if request.auth.uid == userId;
         // Allow admins to read anyone's usage data
-        allow read: if isUserAdmin(request.auth.uid);
+        allow read: if request.auth.uid == userId || isAdmin();
       }
     }
 
     // Rules for the 'chats' collection
     match /chats/{chatId} {
       // Allow users to read chat sessions that belong to them
-      allow read: if request.auth.uid == resource.data.chatbotId;
       // Allow admins to read any chat session
-      allow read: if isUserAdmin(request.auth.uid);
+      allow read: if request.auth.uid == resource.data.chatbotId || isAdmin();
     }
   }
 }
