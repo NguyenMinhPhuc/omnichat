@@ -278,25 +278,23 @@ export async function deleteKnowledgeSource(userId: string, sourceId: string): P
 export async function getUsersWithUsageData() {
   try {
     const firestore = getDb();
-    const usersCollectionRef = firestore.collection('users');
-    const usersSnapshot = await usersCollectionRef.get();
-
     const now = new Date();
     const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    
-    // Step 1: Get all user data
+
+    // Step 1: Get all users
+    const usersSnapshot = await firestore.collection('users').get();
     const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // Step 2: Create an array of promises to fetch usage data for each user
-    const usagePromises = usersSnapshot.docs.map(userDoc => {
-      const monthlyUsageDocRef = userDoc.ref.collection('monthlyUsage').doc(monthYear);
+    // Step 2: Create an array of promises, where each promise fetches usage for one user
+    const usagePromises = usersData.map(user => {
+      const monthlyUsageDocRef = firestore.collection('users').doc(user.id).collection('monthlyUsage').doc(monthYear);
       return monthlyUsageDocRef.get();
     });
 
-    // Step 3: Await all usage data promises
+    // Step 3: Wait for all usage data fetches to complete
     const usageSnapshots = await Promise.all(usagePromises);
 
-    // Step 4: Map users and their usage data together
+    // Step 4: Combine user data with their corresponding usage data
     const usersWithUsage = usersData.map((user, index) => {
       const usageDoc = usageSnapshots[index];
       if (usageDoc.exists()) {
@@ -309,7 +307,7 @@ export async function getUsersWithUsageData() {
           chatRequests: usageData?.chatRequests || 0,
         };
       } else {
-        // If no usage doc, return user with zero usage
+        // If no usage document exists for the month, return with zero usage
         return {
           ...user,
           totalTokens: 0,
@@ -322,9 +320,9 @@ export async function getUsersWithUsageData() {
 
     return usersWithUsage;
   } catch (error) {
-    console.error("Error fetching users with monthly usage:", error);
-    // It's better to throw the error so the calling function knows something went wrong.
-    throw new Error("Failed to fetch users with monthly usage data.");
+    console.error("Error fetching users with usage data:", error);
+    // Throw the error to be caught by the calling component
+    throw new Error("Failed to fetch users and their usage data.");
   }
 }
     

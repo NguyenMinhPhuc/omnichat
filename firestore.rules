@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -11,11 +12,11 @@ service cloud.firestore {
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow users to read their own document, and allow admins to read any user document.
-      allow read: if request.auth.uid == userId || isAdmin();
-      // Allow users to write only to their own document.
+      // Allow users to write to their own document.
+      // Allow users to read their own document OR allow admins to read any document.
       allow write: if request.auth.uid == userId;
-
+      allow read: if request.auth.uid == userId || isAdmin();
+      
       // Rules for the 'monthlyUsage' subcollection
       match /monthlyUsage/{usageId} {
         // Allow users to read their own usage data
