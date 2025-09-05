@@ -2,33 +2,41 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
 
-    // Helper function to check if the user is an admin by looking at their document
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // A user can read/write their own data. An admin can read any user's data.
-      allow read, write: if request.auth.uid == userId;
-      allow list, get: if isAdmin();
-
-      // Rules for the 'monthlyUsage' subcollection
-      match /monthlyUsage/{usageId} {
-        // A user can read their own usage data. An admin can read anyone's usage data.
-        allow read: if request.auth.uid == userId || isAdmin();
-      }
+      allow read, update: if isOwner(userId) || isAdmin();
+      allow create: if request.auth.uid != null;
+      allow delete: if isAdmin();
+    }
+    
+    match /chats/{chatId} {
+      // Users can create new chats for themselves
+      allow create: if request.auth.uid != null && request.resource.data.chatbotId == request.auth.uid;
+      
+      // Users can only read/update their own chat histories
+      allow read, update: if request.auth.uid != null && resource.data.chatbotId == request.auth.uid;
+      
+      // Admins can read all chat histories for support/monitoring
+      allow read: if isAdmin();
     }
 
-    // Rules for the 'chats' collection
-    match /chats/{chatId} {
-      // A user can read their own chat sessions (where they are the chatbot owner).
-      // An admin can read any chat session.
-      allow read: if request.auth.uid == resource.data.chatbotId || isAdmin();
-      // Writing to chats is handled by server-side logic with Admin credentials,
-      // so no direct client write access is needed.
-      allow write: if false;
+    match /monthlyUsage/{usageId} {
+        // The document ID is composite: {userId}_{monthYear}
+        // Allow create if the userId in the doc ID matches the user's own UID
+        allow create: if request.auth.uid != null && request.auth.uid == split(usageId, '_')[0];
+        
+        // Allow user to read/update their own usage doc.
+        // Allow admin to read anyone's usage doc.
+        allow read, update: if (request.auth.uid != null && request.auth.uid == resource.data.userId) || isAdmin();
     }
   }
 }
