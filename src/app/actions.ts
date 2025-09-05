@@ -24,7 +24,7 @@ function getDb() {
                 credential: cert(serviceAccount)
             });
         } catch (error) {
-            console.error("Failed to initialize Firebase Admin with serviceAccount.json, falling back to default credentials.", error);
+            console.error("Failed to initialize Firebase Admin with serviceAccount.json. Make sure the file exists in the root directory. Falling back to default credentials.", error);
             // Fallback for environments where service account is auto-discovered (like Google Cloud Run)
             adminApp = initializeApp();
         }
