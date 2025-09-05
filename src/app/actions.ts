@@ -19,14 +19,10 @@ function getDb() {
     if (!getApps().length) {
         try {
             // This requires the serviceAccount.json file to be present
-            const serviceAccount = require('../../../serviceAccount.json');
-            adminApp = initializeApp({
-                credential: cert(serviceAccount)
-            });
-        } catch (error) {
-            console.error("Failed to initialize Firebase Admin with serviceAccount.json. Make sure the file exists in the root directory. Falling back to default credentials.", error);
-            // Fallback for environments where service account is auto-discovered (like Google Cloud Run)
             adminApp = initializeApp();
+        } catch (error) {
+            console.error("Failed to initialize Firebase Admin with default credentials.", error);
+            // This will likely fail if credentials aren't set up, but it's the standard way
         }
     } else {
         adminApp = getApps()[0]!;
@@ -98,16 +94,16 @@ export async function getAIResponse({
       apiKey: userApiKey,
     });
 
-    if (result.totalTokens && result.chatRequestCount) {
-      const firestoreDb = getDb();
+    // Restore the logic to update monthly usage statistics
+    if (result.totalTokens && result.chatRequestCount && firestore) {
       const now = new Date();
       const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
       const usageDocId = `${userId}_${monthYear}`; // Create a composite ID
 
-      const monthlyUsageRef = firestoreDb.collection('monthlyUsage').doc(usageDocId);
+      const monthlyUsageRef = firestore.collection('monthlyUsage').doc(usageDocId);
 
       try {
-        await firestoreDb.runTransaction(async (transaction) => {
+        await firestore.runTransaction(async (transaction) => {
             const doc = await transaction.get(monthlyUsageRef);
             if (!doc.exists) {
                 transaction.set(monthlyUsageRef, {
