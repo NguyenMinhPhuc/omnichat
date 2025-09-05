@@ -16,25 +16,24 @@ let adminApp: App;
  * Ensures that initialization only happens once, handling Next.js HMR correctly.
  */
 function getDb() {
-  if (!getApps().length) {
-    try {
-      // This requires the serviceAccount.json file to be present in the project root
-      const serviceAccount = require('../../serviceAccount.json');
-      adminApp = initializeApp({
-        credential: cert(serviceAccount)
-      });
-    } catch (error) {
-      console.error("Failed to initialize Firebase Admin with serviceAccount.json, falling back to default credentials.", error);
-      // Fallback for environments where service account is auto-discovered (like Google Cloud Run)
-      adminApp = initializeApp();
+    if (!getApps().length) {
+        try {
+            // This requires the serviceAccount.json file to be present
+            const serviceAccount = require('../../../serviceAccount.json');
+            adminApp = initializeApp({
+                credential: cert(serviceAccount)
+            });
+        } catch (error) {
+            console.error("Failed to initialize Firebase Admin with serviceAccount.json, falling back to default credentials.", error);
+            // Fallback for environments where service account is auto-discovered (like Google Cloud Run)
+            adminApp = initializeApp();
+        }
+    } else {
+        adminApp = getApps()[0]!;
     }
-  } else {
-    adminApp = getApps()[0]!;
-  }
-  
-  // Always get a new Firestore instance if it's not initialized
-  db = getFirestore(adminApp);
-  return db;
+    
+    db = getFirestore(adminApp);
+    return db;
 }
 
 
@@ -67,12 +66,10 @@ export async function getAIResponse({
         if (userData) {
           userApiKey = userData.geminiApiKey;
           
-          // Add the general knowledgeBase if it exists and is not empty
           if (userData.knowledgeBase && userData.knowledgeBase.trim() !== '') {
             knowledgeBaseParts.push("General Information:\n" + userData.knowledgeBase);
           }
 
-          // Add the scenario Q&A if it exists
           if (Array.isArray(userData.scenario) && userData.scenario.length > 0) {
             const scenarioText = userData.scenario
               .map((item: ScenarioItem) => `Q: ${item.question}\nA: ${item.answer}`)
@@ -80,7 +77,6 @@ export async function getAIResponse({
             knowledgeBaseParts.push("Specific Q&A Scenarios:\n" + scenarioText);
           }
 
-          // Add knowledge sources if they exist
           if (Array.isArray(userData.knowledgeSources) && userData.knowledgeSources.length > 0) {
             const sourcesText = userData.knowledgeSources
                 .map((source: KnowledgeSource) => `Topic: ${source.title}\nContent:\n${source.content}`)
@@ -102,19 +98,21 @@ export async function getAIResponse({
       apiKey: userApiKey,
     });
 
-    // --- Start: Usage Tracking Logic ---
     if (result.totalTokens && result.chatRequestCount) {
       const firestoreDb = getDb();
       const now = new Date();
       const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+      const usageDocId = `${userId}_${monthYear}`; // Create a composite ID
 
-      const monthlyUsageRef = firestoreDb.collection('users').doc(userId).collection('monthlyUsage').doc(monthYear);
+      const monthlyUsageRef = firestoreDb.collection('monthlyUsage').doc(usageDocId);
 
       try {
         await firestoreDb.runTransaction(async (transaction) => {
             const doc = await transaction.get(monthlyUsageRef);
             if (!doc.exists) {
                 transaction.set(monthlyUsageRef, {
+                    userId: userId, // Store the userId for querying
+                    monthYear: monthYear,
                     totalTokens: result.totalTokens,
                     inputTokens: result.inputTokens || 0,
                     outputTokens: result.outputTokens || 0,
@@ -133,23 +131,17 @@ export async function getAIResponse({
         });
       } catch (usageError) {
         console.error('Error updating monthly usage for user', userId, usageError);
-        // Do not re-throw, as AI response is more critical than usage tracking
       }
     }
-    // --- End: Usage Tracking Logic ---
 
     return result;
   } catch (error) {
     console.error('Error getting AI response:', error);
-
-    // Check for specific quota error
     if (error instanceof Error && error.message.includes('429 Too Many Requests')) {
       return {
         response: "Xin lỗi, hiện tại tôi đang hơi quá tải một chút. Bạn vui lòng thử lại sau vài phút nhé.",
       };
     }
-    
-    // Generic error for other issues
     const errorMessage =
       error instanceof Error ? error.message : 'An unexpected error occurred.';
     return {
@@ -190,7 +182,7 @@ export async function addKnowledgeSource(userId: string, source: Omit<KnowledgeS
     try {
         const firestore = getDb();
         const userDocRef = firestore.collection('users').doc(userId);
-        const newId = firestore.collection('users').doc().id; // Generate a new unique ID
+        const newId = firestore.collection('users').doc().id; 
         const newSource: KnowledgeSource = { ...source, id: newId };
 
         await userDocRef.update({
@@ -279,42 +271,35 @@ export async function getUsersWithUsageData() {
     const firestore = getDb();
     const now = new Date();
     const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    
+
     // Step 1: Get all users
     const usersSnapshot = await firestore.collection('users').get();
     if (usersSnapshot.empty) {
       return [];
     }
+    const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    const usersWithUsage = [];
-
-    // Step 2: Loop through each user to get their usage data
-    for (const userDoc of usersSnapshot.docs) {
-      const userData = { id: userDoc.id, ...userDoc.data() };
-      
-      const monthlyUsageDocRef = firestore.collection('users').doc(userDoc.id).collection('monthlyUsage').doc(monthYear);
-      const monthlyUsageDoc = await monthlyUsageDocRef.get();
-
-      if (monthlyUsageDoc.exists()) {
-        const usageData = monthlyUsageDoc.data();
-        usersWithUsage.push({
-          ...userData,
-          totalTokens: usageData?.totalTokens || 0,
-          inputTokens: usageData?.inputTokens || 0,
-          outputTokens: usageData?.outputTokens || 0,
-          chatRequests: usageData?.chatRequests || 0,
-        });
-      } else {
-        usersWithUsage.push({
-          ...userData,
-          totalTokens: 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          chatRequests: 0,
-        });
-      }
-    }
-
+    // Step 2: Get all usage data for the current month
+    const usageQuery = firestore.collection('monthlyUsage').where('monthYear', '==', monthYear);
+    const usageSnapshot = await usageQuery.get();
+    const usageDataMap = new Map();
+    usageSnapshot.forEach(doc => {
+      const data = doc.data();
+      usageDataMap.set(data.userId, data);
+    });
+    
+    // Step 3: Combine user data with their usage data
+    const usersWithUsage = usersData.map(user => {
+      const usageData = usageDataMap.get(user.id);
+      return {
+        ...user,
+        totalTokens: usageData?.totalTokens || 0,
+        inputTokens: usageData?.inputTokens || 0,
+        outputTokens: usageData?.outputTokens || 0,
+        chatRequests: usageData?.chatRequests || 0,
+      };
+    });
+    
     return usersWithUsage;
     
   } catch (error) {
@@ -323,6 +308,3 @@ export async function getUsersWithUsageData() {
     throw new Error("Failed to fetch users and their usage data.");
   }
 }
-    
-
-    

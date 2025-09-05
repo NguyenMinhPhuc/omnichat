@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -133,15 +133,14 @@ export default function AdminDashboard() {
       }
     };
 
-    // We call the async function.
     checkAdminStatusAndFetchData();
-  }, [user, loading]);
+  }, [user, loading, router]);
   
   const fetchUsersAndUsageData = async () => {
     setIsLoadingUsers(true);
     try {
         const userList = await getUsersWithUsageData();
-        setUsers(userList as UserData[]); // Cast to UserData[]
+        setUsers(userList as UserData[]);
     } catch (error) {
         console.error("Error fetching users:", error);
         toast({ title: 'Error', description: 'Could not fetch user data.', variant: 'destructive'});
@@ -566,7 +565,7 @@ export default function AdminDashboard() {
                     ))
                   ) : (
                     <TableRow>
-                        <TableCell colSpan={8} className="h-24 text-center">
+                        <TableCell colSpan={7} className="h-24 text-center">
                             No users found.
                         </TableCell>
                     </TableRow>
@@ -611,5 +610,3 @@ export default function AdminDashboard() {
     </TooltipProvider>
   );
 }
-
-    
