@@ -95,7 +95,7 @@ export async function getAIResponse({
     });
 
     // Restore the logic to update monthly usage statistics
-    if (result.totalTokens && result.chatRequestCount && firestore) {
+    if (result.totalTokens !== undefined && result.chatRequestCount !== undefined && firestore) {
       const now = new Date();
       const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
       const usageDocId = `${userId}_${monthYear}`; // Create a composite ID
