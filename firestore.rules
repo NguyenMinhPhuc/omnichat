@@ -1,46 +1,33 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user is an admin
     function isAdmin() {
+      // Check if the user making the request is an admin by looking up their role in the users collection.
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // Admins can read all user documents
-      allow read: if isAdmin() || request.auth.uid == userId;
-      // Users can only write to their own document
-      allow write: if request.auth.uid == userId;
-
-       // Rules for the nested 'monthlyUsage' collection
-      match /monthlyUsage/{usageId} {
-        // Admins can read all usage documents
-        allow read: if isAdmin();
-        // Nobody can write directly to usage docs from the client (should be done by server/actions)
-        allow write: if false;
-      }
+      // Users can read and write to their own document.
+      allow read, write: if request.auth.uid == userId;
+      
+      // Admins can get (read individual docs) and list (read collections) all user documents.
+      // This is crucial for the admin dashboard to function.
+      allow get, list: if isAdmin();
+    }
+    
+    match /users/{userId}/monthlyUsage/{usageId} {
+        // Admins or the user themselves can read usage data.
+        allow read: if isAdmin() || request.auth.uid == userId;
     }
 
-    // Rules for the 'chats' collection
     match /chats/{chatId} {
-      // A user can read a chat session if the chatbotId in the document
-      // matches their own user ID.
-      allow read: if request.auth != null && request.auth.uid == resource.data.chatbotId;
-
-      // Anyone authenticated can create a new chat.
-      // Further restrictions can be added if needed (e.g., check if chatbotId is a valid user).
-      allow create: if request.auth != null;
-
-      // Only the user who owns the chat can add messages to it.
-      allow update: if request.auth != null && request.auth.uid == resource.data.chatbotId;
-      
-      // Prevent accidental deletion of chat history from the client.
-      allow delete: if false;
+        // Users can create chats and read their own chat history.
+        allow read, create: if request.auth.uid == request.resource.data.chatbotId;
+        // Users can update their own ongoing chat sessions.
+        allow update: if request.auth.uid == resource.data.chatbotId;
     }
   }
 }
