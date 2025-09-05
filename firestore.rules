@@ -3,40 +3,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
+    // User profile data.
+    // Make user data publicly readable so the chatbot can fetch configuration.
+    // Writes are restricted to the user themselves or an admin.
     match /users/{userId} {
-      allow read, update: if isOwner(userId) || isAdmin();
-      allow create: if request.auth.uid != null;
-      allow delete: if isAdmin();
-    }
-    
-    match /chats/{chatId} {
-      // Users can create new chats for themselves
-      allow create: if request.auth.uid != null && request.resource.data.chatbotId == request.auth.uid;
-      
-      // Users can only read/update their own chat histories
-      allow read, update: if request.auth.uid != null && resource.data.chatbotId == request.auth.uid;
-      
-      // Admins can read all chat histories for support/monitoring
-      allow read: if isAdmin();
+      allow read; 
+      allow write: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
 
+    // Chat history for each session.
+    // Allow anyone to create and update chat sessions. This is necessary for
+    // the embedded, unauthenticated chatbot to function.
+    match /chats/{chatId} {
+      allow create, update; 
+    }
+
+    // Monthly usage statistics.
+    // Only authenticated users can write to their own usage document.
+    // Admins can read all usage documents for reporting.
     match /monthlyUsage/{usageId} {
-        // The document ID is composite: {userId}_{monthYear}
-        // Allow create if the userId in the doc ID matches the user's own UID
-        allow create: if request.auth.uid != null && request.auth.uid == split(usageId, '_')[0];
-        
-        // Allow user to read/update their own usage doc.
-        // Allow admin to read anyone's usage doc.
-        allow read, update: if (request.auth.uid != null && request.auth.uid == resource.data.userId) || isAdmin();
+      allow read: if request.auth != null && (request.resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow write: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
   }
 }
