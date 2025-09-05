@@ -280,48 +280,43 @@ export async function getUsersWithUsageData() {
     const firestore = getDb();
     const now = new Date();
     const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+    const usersWithUsage = [];
 
     // Step 1: Get all users
     const usersSnapshot = await firestore.collection('users').get();
     if (usersSnapshot.empty) {
       return [];
     }
-    const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // Step 2: Create an array of promises, where each promise fetches usage for one user
-    const usagePromises = usersData.map(user => {
-      const monthlyUsageDocRef = firestore.collection('users').doc(user.id).collection('monthlyUsage').doc(monthYear);
-      return monthlyUsageDocRef.get();
-    });
+    // Step 2: Loop through each user to get their usage data
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = { id: userDoc.id, ...userDoc.data() };
+      
+      const monthlyUsageDocRef = userDoc.ref.collection('monthlyUsage').doc(monthYear);
+      const monthlyUsageDoc = await monthlyUsageDocRef.get();
 
-    // Step 3: Wait for all usage data fetches to complete
-    const usageSnapshots = await Promise.all(usagePromises);
-
-    // Step 4: Combine user data with their corresponding usage data
-    const usersWithUsage = usersData.map((user, index) => {
-      const usageDoc = usageSnapshots[index];
-      if (usageDoc.exists()) {
-        const usageData = usageDoc.data();
-        return {
-          ...user,
+      if (monthlyUsageDoc.exists()) {
+        const usageData = monthlyUsageDoc.data();
+        usersWithUsage.push({
+          ...userData,
           totalTokens: usageData?.totalTokens || 0,
           inputTokens: usageData?.inputTokens || 0,
           outputTokens: usageData?.outputTokens || 0,
           chatRequests: usageData?.chatRequests || 0,
-        };
+        });
       } else {
-        // If no usage document exists for the month, return with zero usage
-        return {
-          ...user,
+        usersWithUsage.push({
+          ...userData,
           totalTokens: 0,
           inputTokens: 0,
           outputTokens: 0,
           chatRequests: 0,
-        };
+        });
       }
-    });
+    }
 
     return usersWithUsage;
+    
   } catch (error) {
     console.error("Error fetching users with usage data:", error);
     // Throw the error to be caught by the calling component
