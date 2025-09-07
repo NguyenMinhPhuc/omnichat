@@ -15,20 +15,20 @@ export const IntelligentAIResponseOutputSchema = z.object({
 export type IntelligentAIResponseOutput = z.infer<typeof IntelligentAIResponseOutputSchema>;
 
 
-// Schema for Lead Qualification
-export const LeadQualificationInputSchema = z.object({
+// Schema for Lead Capture
+export const LeadCaptureInputSchema = z.object({
   apiKey: z.string().optional(),
-  customerName: z.string().optional(),
-  company: z.string().optional(),
-  need: z.string().optional(),
+  chatHistory: z.string().describe('The entire conversation history between the user and the AI assistant.'),
 });
-export type LeadQualificationInput = z.infer<typeof LeadQualificationInputSchema>;
+export type LeadCaptureInput = z.infer<typeof LeadCaptureInputSchema>;
 
-export const LeadQualificationOutputSchema = z.object({
-  response: z.string(),
-  qualification: z.string().optional(),
-  inputTokens: z.number(),
-  outputTokens: z.number(),
-  totalTokens: z.number(),
+export const LeadCaptureOutputSchema = z.object({
+    response: z.string().describe("The AI's next response to continue the conversation."),
+    lead: z.object({
+        customerName: z.string().optional().describe("The customer's full name."),
+        phoneNumber: z.string().optional().describe("The customer's phone number."),
+        needs: z.string().optional().describe("A summary of the customer's needs or interests."),
+    }),
+    isComplete: z.boolean().describe('Set to true only when all information (name, needs, phone number) has been collected.'),
 });
-export type LeadQualificationOutput = z.infer<typeof LeadQualificationOutputSchema>;
+export type LeadCaptureOutput = z.infer<typeof LeadCaptureOutputSchema>;

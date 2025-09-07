@@ -2,9 +2,7 @@
 'use server';
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
-import { runLeadQualificationFlow } from '@/ai/flows/lead-qualification-flow';
-import { genkit } from 'genkit';
-import { IntelligentAIResponseOutput } from '@/ai/schemas';
+import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
@@ -36,17 +34,18 @@ function getDb() {
 
 
 /**
- * Fetches an AI response using the Genkit flow.
- * If a knowledge base or scenario exists for the user, it's retrieved and passed to the AI.
+ * Fetches an AI response using a specified Genkit flow.
  */
 export async function getAIResponse({
   query,
   userId,
   flowName = 'intelligentAIResponseFlow',
+  chatHistory = '',
 }: {
   query: string;
   userId: string;
   flowName?: string;
+  chatHistory?: string;
 }): Promise<any> {
   try {
     const firestore = getDb();
@@ -92,8 +91,11 @@ export async function getAIResponse({
     const combinedKnowledgeBase = knowledgeBaseParts.join('\n\n---\n\n');
 
     let result: any;
-    if (flowName === 'leadQualificationFlow') {
-      result = await runLeadQualificationFlow(query);
+    if (flowName === 'leadCaptureFlow') {
+      result = await leadCaptureFlow({
+        chatHistory,
+        apiKey: userApiKey,
+      });
     } else {
       result = await intelligentAIResponseFlow({
         query,
@@ -101,42 +103,6 @@ export async function getAIResponse({
         knowledgeBase: combinedKnowledgeBase,
         apiKey: userApiKey,
       });
-    }
-
-    // Restore the logic to update monthly usage statistics
-    if (result.totalTokens !== undefined && result.chatRequestCount !== undefined && firestore) {
-      const now = new Date();
-      const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-      const usageDocId = `${userId}_${monthYear}`; // Create a composite ID
-
-      const monthlyUsageRef = firestore.collection('monthlyUsage').doc(usageDocId);
-
-      try {
-        await firestore.runTransaction(async (transaction) => {
-            const doc = await transaction.get(monthlyUsageRef);
-            if (!doc.exists) {
-                transaction.set(monthlyUsageRef, {
-                    userId: userId, // Store the userId for querying
-                    monthYear: monthYear,
-                    totalTokens: result.totalTokens,
-                    inputTokens: result.inputTokens || 0,
-                    outputTokens: result.outputTokens || 0,
-                    chatRequests: result.chatRequestCount,
-                    lastUpdated: FieldValue.serverTimestamp(),
-                });
-            } else {
-                transaction.update(monthlyUsageRef, {
-                    totalTokens: FieldValue.increment(result.totalTokens!),
-                    inputTokens: FieldValue.increment(result.inputTokens || 0),
-                    outputTokens: FieldValue.increment(result.outputTokens || 0),
-                    chatRequests: FieldValue.increment(result.chatRequestCount!),
-                    lastUpdated: FieldValue.serverTimestamp(),
-                });
-            }
-        });
-      } catch (usageError) {
-        console.error('Error updating monthly usage for user', userId, usageError);
-      }
     }
 
     return result;
@@ -150,7 +116,7 @@ export async function getAIResponse({
     const errorMessage =
       error instanceof Error ? error.message : 'An unexpected error occurred.';
     return {
-      response: `Sorry, I encountered an error: ${errorMessage}`,
+      response: `Lỗi xác thực: Không thể kết nối đến máy chủ AI. Vui lòng kiểm tra lại Gemini API Key của bạn (trong trang Profile) hoặc của hệ thống (nếu bạn không cung cấp key riêng). Đảm bảo API Key hợp lệ, dự án Google Cloud đã bật thanh toán và Generative Language API đã được kích hoạt.`,
     };
   }
 }

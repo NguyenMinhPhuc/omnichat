@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, Check, Zap } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,12 +11,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import { getAIResponse } from '@/app/actions';
-import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, arrayUnion, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Badge } from './ui/badge';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
-import { leadQualificationFlow } from '@/ai/flows/lead-qualification-flow';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -64,6 +63,12 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   const [chatId, setChatId] = useState<string | null>(null);
   const [currentScriptedQuestions, setCurrentScriptedQuestions] = useState<ScenarioItem[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // State to manage the current flow
+  const [activeFlow, setActiveFlow] = useState<'intelligent' | 'leadCapture'>('intelligent');
+  const [leadCaptureComplete, setLeadCaptureComplete] = useState(false);
+  const [capturedLead, setCapturedLead] = useState(null);
+
 
   useEffect(() => {
     const fetchChatbotConfig = async () => {
@@ -117,6 +122,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
             chatbotId: chatbotId,
             createdAt: serverTimestamp(),
             messages: [initialMessage],
+            flow: activeFlow,
         });
         setChatId(docRef.id);
         return docRef.id;
@@ -134,29 +140,57 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     });
   }
   
-  const handleFlowMessage = async (flowName: string, data: any) => {
-    const text = `Triggering flow: ${flowName}`;
-    const userMessage: Message = { sender: 'user', text };
-    setMessages(prev => [...prev, userMessage]);
+  const handleLeadCapture = async (currentMessages: Message[]) => {
     setIsAiTyping(true);
+    setInputValue('');
+    setCurrentScriptedQuestions([]);
+
+    const chatHistoryText = currentMessages.map(m => `${m.sender === 'ai' ? 'AI' : 'User'}: ${m.text}`).join('\n');
 
     let currentChatId = chatId;
-     if (!currentChatId) {
-        currentChatId = await createNewChatSession(userMessage);
-    } else {
-        await addMessageToChat(currentChatId, userMessage);
+    if (!currentChatId) {
+        currentChatId = await createNewChatSession(currentMessages[currentMessages.length - 1]);
     }
+
     if (!currentChatId) {
         setIsAiTyping(false);
         return;
     }
-
-    const aiResult = await getAIResponse({ query: data, userId: chatbotId, flowName });
-    const aiMessage: Message = { sender: 'ai', text: aiResult.response };
-    setMessages(prev => [...prev, aiMessage]);
-    await addMessageToChat(currentChatId, aiMessage);
     
+    const result = await getAIResponse({ 
+        query: '', 
+        userId: chatbotId, 
+        flowName: 'leadCaptureFlow',
+        chatHistory: chatHistoryText
+    });
+
     setIsAiTyping(false);
+
+    if (result && result.response) {
+        const aiMessage: Message = { sender: 'ai', text: result.response };
+        setMessages(prev => [...prev, aiMessage]);
+        addMessageToChat(currentChatId, aiMessage);
+
+        if (result.isComplete) {
+            setLeadCaptureComplete(true);
+            setCapturedLead(result.lead);
+            // Save the captured lead to a 'leads' collection
+            try {
+                const leadDocRef = doc(collection(db, 'leads'));
+                await setDoc(leadDocRef, {
+                    ...result.lead,
+                    chatbotId: chatbotId,
+                    chatId: currentChatId,
+                    createdAt: serverTimestamp(),
+                });
+                console.log("Lead saved successfully!");
+            } catch (leadError) {
+                console.error("Error saving lead: ", leadError);
+            }
+            // Switch back to the intelligent flow
+            setActiveFlow('intelligent');
+        }
+    }
   }
 
 
@@ -189,6 +223,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   };
 
   const handleScriptedMessage = async (item: ScenarioItem) => {
+    setActiveFlow('intelligent');
     const userMessage: Message = { sender: 'user', text: item.question };
     const aiMessage: Message = { sender: 'ai', text: item.answer };
 
@@ -204,7 +239,6 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     }
 
     const nextQuestions = scenario.filter(child => child.parentId === item.id);
-    // If there are follow-up questions, show them. Otherwise, show the root questions.
     setCurrentScriptedQuestions(nextQuestions.length > 0 ? nextQuestions : scenario.filter(item => item.parentId === null));
   };
   
@@ -212,9 +246,36 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     e.preventDefault();
     if (!inputValue.trim() || !chatbotId) return;
     const userMessage: Message = { sender: 'user', text: inputValue };
-    setMessages(prev => [...prev, userMessage]);
-    handleFreeformMessage(inputValue);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+
+    if (activeFlow === 'leadCapture') {
+        handleLeadCapture(newMessages);
+    } else {
+        handleFreeformMessage(inputValue);
+    }
   };
+
+  const startLeadCaptureFlow = () => {
+    setActiveFlow('leadCapture');
+    setLeadCaptureComplete(false);
+    setCapturedLead(null);
+    const startMessage: Message = { sender: 'ai', text: "Để có thể hỗ trợ tốt nhất, bạn vui lòng cho tôi biết một vài thông tin nhé. Đầu tiên, tên của bạn là gì?" };
+    const newMessages = [...messages, startMessage];
+    setMessages(newMessages);
+    
+    // Create a new chat session for this flow or use existing one
+    const startInteraction = async () => {
+        let currentChatId = chatId;
+        if (!currentChatId) {
+            currentChatId = await createNewChatSession(startMessage);
+        } else {
+            await addMessageToChat(currentChatId, startMessage);
+            await updateDoc(doc(db, 'chats', currentChatId), { flow: 'leadCapture' });
+        }
+    }
+    startInteraction();
+  }
 
   if (error && !customization) {
     return <div className="flex items-center justify-center h-full w-full bg-red-100 text-red-700">{error}</div>;
@@ -241,7 +302,10 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                 <p className="text-xs text-primary-foreground/80">Online</p>
               </div>
             </div>
-            <Button onClick={() => handleFlowMessage('leadQualificationFlow', { need: "I want to ask about pricing" })} size="sm" variant="secondary">Start Lead Qual</Button>
+            <Button onClick={startLeadCaptureFlow} size="sm" variant="secondary" disabled={activeFlow === 'leadCapture'}>
+                <Zap className="mr-2 h-4 w-4" />
+                Tư vấn ngay
+            </Button>
           </CardHeader>
           <CardContent className="flex-1 p-0 bg-[--chat-bg-color]">
             <ScrollArea className="h-full" ref={scrollAreaRef}>
@@ -291,7 +355,15 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                     </div>
                 )}
               </div>
-              {!isAiTyping && currentScriptedQuestions.length > 0 && (
+              {!isAiTyping && leadCaptureComplete && (
+                  <div className="p-4">
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                          <Check className="mr-2 h-4 w-4"/>
+                          Cảm ơn bạn! Thông tin đã được ghi nhận.
+                      </Badge>
+                  </div>
+              )}
+              {!isAiTyping && !leadCaptureComplete && activeFlow === 'intelligent' && currentScriptedQuestions.length > 0 && (
                 <div className="p-4 pt-0 flex flex-wrap gap-2 justify-start">
                     {currentScriptedQuestions.map(item => (
                         <Badge 
@@ -311,13 +383,14 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
             <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
               <Input
                 type="text"
-                placeholder="Type your message..."
+                placeholder={leadCaptureComplete ? "Cảm ơn bạn! Chat đã kết thúc." : "Nhập tin nhắn của bạn..."}
                 value={inputValue}
                 onChange={handleInputChange}
                 className="flex-1"
                 autoComplete="off"
+                disabled={isAiTyping || leadCaptureComplete}
               />
-              <Button type="submit" size="icon" disabled={!inputValue.trim()} style={{backgroundColor: customization.primaryColor}}>
+              <Button type="submit" size="icon" disabled={!inputValue.trim() || isAiTyping || leadCaptureComplete} style={{backgroundColor: customization.primaryColor}}>
                 <Send className="h-4 w-4" />
                 <span className="sr-only">Send</span>
               </Button>
