@@ -289,9 +289,9 @@ export async function getLeads(userId: string) {
     }
     try {
         const firestore = getDb();
+        // Query without ordering to avoid composite index requirement.
         const leadsQuery = firestore.collection('leads')
-                                .where('chatbotId', '==', userId)
-                                .orderBy('createdAt', 'desc');
+                                .where('chatbotId', '==', userId);
         const snapshot = await leadsQuery.get();
         if (snapshot.empty) {
             return [];
@@ -336,3 +336,5 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
         return { success: false, message: `Failed to update lead status: ${errorMessage}` };
     }
 }
+
+    

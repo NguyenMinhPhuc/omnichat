@@ -68,11 +68,12 @@ export default function LeadsManagement() {
       const fetchUserDataAndLeads = async () => {
         setIsLoading(true);
         try {
-            const [leadsData] = await Promise.all([
-                getLeads(user.uid),
-            ]);
-            setLeads(leadsData as Lead[]);
-            // Other user data fetching can remain if needed
+            const leadsData = await getLeads(user.uid);
+            // Sort leads on the client-side
+            const sortedLeads = (leadsData as Lead[]).sort((a, b) => 
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            setLeads(sortedLeads);
         } catch (error) {
             console.error("Failed to fetch data:", error);
             toast({ title: 'Error', description: 'Could not fetch leads.', variant: 'destructive' });
@@ -302,3 +303,5 @@ export default function LeadsManagement() {
      </SidebarProvider>
   );
 }
+
+    
