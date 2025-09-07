@@ -2,9 +2,9 @@
 'use server';
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
-import { leadCaptureFlow } from '@/ai/flows/lead-capture-flow';
+import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, Firestore, FieldValue, updateDoc as adminUpdateDoc } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
 import type { KnowledgeSource } from '@/components/Dashboard';
 
@@ -299,11 +299,14 @@ export async function getLeads(userId: string) {
         // Manually converting Timestamp to a serializable format (ISO string)
         const leads = snapshot.docs.map(doc => {
             const data = doc.data();
+            const createdAt = data.createdAt;
             return {
                 id: doc.id,
                 ...data,
-                // Ensure createdAt is serializable
-                createdAt: data.createdAt.toDate().toISOString(), 
+                // Ensure createdAt is serializable, checking if it's a Timestamp
+                createdAt: createdAt && typeof createdAt.toDate === 'function' 
+                    ? createdAt.toDate().toISOString() 
+                    : new Date().toISOString(), // Fallback for invalid data
             };
         });
         return leads;
@@ -325,7 +328,7 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
     try {
         const firestore = getDb();
         const leadDocRef = firestore.collection('leads').doc(leadId);
-        await updateDoc(leadDocRef, { status });
+        await adminUpdateDoc(leadDocRef, { status });
         return { success: true, message: "Lead status updated successfully." };
     } catch (error) {
         console.error("Error updating lead status:", error);

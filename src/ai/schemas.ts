@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 // Schema for intelligent AI responses

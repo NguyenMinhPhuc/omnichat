@@ -247,22 +247,23 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     if (!inputValue.trim() || !chatbotId) return;
 
     const userMessage: Message = { sender: 'user', text: inputValue };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-
-    // Ensure chatId exists and user message is logged before calling AI
+    
     let currentChatId = chatId;
     if (!currentChatId) {
-        currentChatId = await createNewChatSession(userMessage);
+        const newChatId = await createNewChatSession(userMessage);
+        if (newChatId) {
+            setChatId(newChatId);
+            currentChatId = newChatId;
+        } else {
+            setError("Could not save chat session. Please refresh.");
+            return;
+        }
     } else {
         await addMessageToChat(currentChatId, userMessage);
     }
-    
-    if (!currentChatId) {
-        setIsAiTyping(false);
-        setError("Could not save chat session. Please refresh.");
-        return;
-    }
+
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
 
     if (activeFlow === 'leadCapture' && !leadCaptureComplete) {
         handleLeadCapture(newMessages);
@@ -403,7 +404,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                 onChange={handleInputChange}
                 className="flex-1"
                 autoComplete="off"
-                disabled={isAiTyping}
+                disabled={isAiTyping || (activeFlow === 'leadCapture' && !leadCaptureComplete && isAiTyping)}
               />
               <Button type="submit" size="icon" disabled={!inputValue.trim() || isAiTyping} style={{backgroundColor: customization.primaryColor}}>
                 <Send className="h-4 w-4" />
