@@ -11,6 +11,12 @@ import type { KnowledgeSource } from '@/components/Dashboard';
 let db: Firestore;
 let adminApp: App;
 
+const serviceAccount = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+};
+
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
  * Ensures that initialization only happens once, handling Next.js HMR correctly.
@@ -18,11 +24,11 @@ let adminApp: App;
 function getDb() {
     if (!getApps().length) {
         try {
-            // This requires the serviceAccount.json file to be present
-            adminApp = initializeApp();
+            adminApp = initializeApp({
+                credential: cert(serviceAccount)
+            });
         } catch (error) {
-            console.error("Failed to initialize Firebase Admin with default credentials.", error);
-            // This will likely fail if credentials aren't set up, but it's the standard way
+            console.error("Failed to initialize Firebase Admin with service account.", error);
         }
     } else {
         adminApp = getApps()[0]!;
