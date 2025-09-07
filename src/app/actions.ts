@@ -21,9 +21,19 @@ const serviceAccount = {
 
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
- * Ensures that initialization only happens once.
+ * Ensures that initialization only happens once and that all required environment variables are set.
  */
 function getDb(): Firestore {
+    if (!serviceAccount.projectId) {
+        throw new Error('FIREBASE_PROJECT_ID is not set in .env.local');
+    }
+    if (!serviceAccount.clientEmail) {
+        throw new Error('FIREBASE_CLIENT_EMAIL is not set in .env.local');
+    }
+    if (!serviceAccount.privateKey) {
+        throw new Error('FIREBASE_PRIVATE_KEY is not set in .env.local');
+    }
+
     if (!getApps().length) {
         // Initialize the app if it hasn't been initialized yet
         adminApp = initializeApp({
