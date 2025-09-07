@@ -11,29 +11,30 @@ import type { KnowledgeSource } from '@/components/Dashboard';
 let db: Firestore;
 let adminApp: App;
 
+// Construct the service account object from environment variables
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  // Replace escaped newlines from environment variable
   privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
 };
 
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
- * Ensures that initialization only happens once, handling Next.js HMR correctly.
+ * Ensures that initialization only happens once.
  */
-function getDb() {
+function getDb(): Firestore {
     if (!getApps().length) {
-        try {
-            adminApp = initializeApp({
-                credential: cert(serviceAccount)
-            });
-        } catch (error) {
-            console.error("Failed to initialize Firebase Admin with service account.", error);
-        }
+        // Initialize the app if it hasn't been initialized yet
+        adminApp = initializeApp({
+            credential: cert(serviceAccount),
+        });
     } else {
+        // Get the already initialized app
         adminApp = getApps()[0]!;
     }
     
+    // Get the Firestore instance from the initialized app
     db = getFirestore(adminApp);
     return db;
 }
@@ -342,7 +343,5 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
         return { success: false, message: `Failed to update lead status: ${errorMessage}` };
     }
 }
-
-    
 
     
