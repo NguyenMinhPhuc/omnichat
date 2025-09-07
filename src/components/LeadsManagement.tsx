@@ -76,7 +76,7 @@ export default function LeadsManagement() {
             setLeads(sortedLeads);
         } catch (error) {
             console.error("Failed to fetch data:", error);
-            toast({ title: 'Error', description: 'Could not fetch leads.', variant: 'destructive' });
+            toast({ title: 'Lỗi', description: 'Không thể tải danh sách khách hàng.', variant: 'destructive' });
         } finally {
             setIsLoading(false);
         }
@@ -89,9 +89,9 @@ export default function LeadsManagement() {
     const result = await updateLeadStatus(leadId, status);
     if (result.success) {
       setLeads(leads.map(lead => lead.id === leadId ? { ...lead, status } : lead));
-      toast({ title: 'Success', description: 'Lead status updated.' });
+      toast({ title: 'Thành công', description: 'Đã cập nhật trạng thái khách hàng.' });
     } else {
-      toast({ title: 'Error', description: result.message, variant: 'destructive' });
+      toast({ title: 'Lỗi', description: result.message, variant: 'destructive' });
     }
   };
 
@@ -127,7 +127,7 @@ export default function LeadsManagement() {
               <SidebarMenuButton asChild>
                 <Link href="/dashboard">
                   <Settings />
-                  Configuration
+                  Cấu hình
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -143,7 +143,7 @@ export default function LeadsManagement() {
               <SidebarMenuButton asChild>
                 <Link href="/dashboard/embed">
                   <Code />
-                  Embed
+                  Tích hợp
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -151,7 +151,7 @@ export default function LeadsManagement() {
               <SidebarMenuButton asChild>
                 <Link href="/profile">
                   <User />
-                  Profile
+                  Hồ sơ
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -190,12 +190,12 @@ export default function LeadsManagement() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push('/profile')}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <span>Hồ sơ</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>Đăng xuất</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -303,5 +303,3 @@ export default function LeadsManagement() {
      </SidebarProvider>
   );
 }
-
-    
