@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -90,7 +91,7 @@ export default function CustomizationPanel({
       try {
         const downloadURL = await uploadFile(file, path);
         setCustomization(prev => ({ ...prev, [field]: downloadURL }));
-        toast({ title: "Upload Successful", description: "Image has been updated." });
+        toast({ title: "Upload Successful", description: "Image has been updated. Remember to save changes." });
       } catch (error) {
         console.error('Upload or update error', error);
         toast({ title: "Error", description: "File upload failed.", variant: "destructive"});
