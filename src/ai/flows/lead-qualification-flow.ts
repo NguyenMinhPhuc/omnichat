@@ -2,27 +2,13 @@
 
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { z } from 'zod';
+import {
+  LeadQualificationInput,
+  LeadQualificationOutput,
+  LeadQualificationInputSchema,
+  LeadQualificationOutputSchema,
+} from '@/ai/schemas';
 
-// ==== Schema định nghĩa cho Lead Qualification ====
-export const LeadQualificationInputSchema = z.object({
-  apiKey: z.string().optional(),
-  customerName: z.string().optional(),
-  company: z.string().optional(),
-  need: z.string().optional(),
-});
-
-export type LeadQualificationInput = z.infer<typeof LeadQualificationInputSchema>;
-
-export const LeadQualificationOutputSchema = z.object({
-  response: z.string(),              // luôn bắt buộc
-  qualification: z.string().optional(), // Hot / Warm / Cold
-  inputTokens: z.number(),
-  outputTokens: z.number(),
-  totalTokens: z.number(),
-});
-
-export type LeadQualificationOutput = z.infer<typeof LeadQualificationOutputSchema>;
 
 // ==== Flow nội bộ ====
 const leadQualificationFlowInternal = ai.defineFlow(
