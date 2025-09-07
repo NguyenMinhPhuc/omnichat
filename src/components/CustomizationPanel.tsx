@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Palette, History, MessageCircleQuestion, Database, Save, PlusCircle, Trash2, Pencil, BookOpen } from 'lucide-react';
+import { Palette, History, MessageCircleQuestion, Database, Save, PlusCircle, Trash2, Pencil, BookOpen, Type, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { Button } from './ui/button';
 import { addKnowledgeSource, updateKnowledgeSource, deleteKnowledgeSource } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import MarkdownEditor from './MarkdownEditor';
 import { uploadFile } from '@/lib/storage';
+import { Bot } from 'lucide-react';
+
 
 interface CustomizationPanelProps {
   customization: CustomizationState;
@@ -65,93 +67,51 @@ export default function CustomizationPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSource, setCurrentSource] = useState<Partial<KnowledgeSource> | null>(null);
+  const [activeTab, setActiveTab] = useState("appearance");
   
-  const [generalSettings, setGeneralSettings] = useState({
-    chatbotName: '',
-    greetingMessage: '',
-    aiPersona: '',
-  });
-
-  const [isGeneralSettingsDirty, setIsGeneralSettingsDirty] = useState(false);
-
-  useEffect(() => {
-    setGeneralSettings({
-      chatbotName: customization.chatbotName,
-      greetingMessage: customization.greetingMessage,
-      aiPersona: customization.aiPersona,
-    });
-  }, [customization]);
-
-  const updateFirestoreCustomization = async (field: string, value: any) => {
-    if (!user) return;
-    console.log('Updating firestore', field, value);
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        [`customization.${field}`]: value
-      });
-      toast({ title: "Success", description: `${field.charAt(0).toUpperCase() + field.slice(1)} updated.` });
-    } catch (e) {
-      const error = e as Error;
-      console.error('Firestore update error', error);
-      toast({ title: "Error", description: error.message, variant: "destructive"});
-    }
-  };
-
-  const handleGeneralSettingsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setGeneralSettings({ ...generalSettings, [e.target.name]: e.target.value });
-    setIsGeneralSettingsDirty(true);
-  };
-
-  const handleSaveGeneralSettings = async () => {
-    if (!user) return;
-    setIsSaving(true);
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        'customization.chatbotName': generalSettings.chatbotName,
-        'customization.greetingMessage': generalSettings.greetingMessage,
-        'customization.aiPersona': generalSettings.aiPersona,
-      });
-      setCustomization({ ...customization, ...generalSettings });
-      setIsGeneralSettingsDirty(false);
-      toast({ title: "Success", description: "General settings saved." });
-    } catch (e) {
-      const error = e as Error;
-      toast({ title: "Error", description: error.message, variant: "destructive"});
-    } finally {
-      setIsSaving(false);
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCustomization({ ...customization, [name]: value });
   };
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setCustomization({ ...customization, [name]: value });
-    updateFirestoreCustomization(name, value);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'chatbotIconUrl') => {
-    console.log('handleFileChange called for field:', field);
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      console.log('File selected:', file.name);
       if (!user) {
-        console.error('User not authenticated');
+        toast({ title: "Authentication Error", description: "You must be logged in to upload files.", variant: "destructive" });
         return;
       }
-      const path = `users/${user.uid}/${field}`;
-      console.log('Uploading to path:', path);
+      const path = `users/${user.uid}/customization/${field}_${Date.now()}`;
       try {
         const downloadURL = await uploadFile(file, path);
-        console.log('Upload successful, download URL:', downloadURL);
-        setCustomization({ ...customization, [field]: downloadURL });
-        console.log('Local customization state updated.');
-        await updateFirestoreCustomization(field, downloadURL);
-        console.log('Firestore update initiated.');
+        setCustomization(prev => ({ ...prev, [field]: downloadURL }));
+        toast({ title: "Upload Successful", description: "Image has been updated." });
       } catch (error) {
         console.error('Upload or update error', error);
         toast({ title: "Error", description: "File upload failed.", variant: "destructive"});
       }
+    }
+  };
+
+  const handleSaveCustomization = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, {
+            'customization': customization
+        });
+        toast({ title: "Success", description: "Customization settings saved." });
+    } catch (e) {
+        const error = e as Error;
+        toast({ title: "Error", description: `Failed to save settings: ${error.message}`, variant: "destructive"});
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -212,7 +172,7 @@ export default function CustomizationPanel({
         <CardDescription>Customize the look, behavior, and knowledge of your chatbot.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="appearance">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="appearance"><Palette className="mr-2 h-4 w-4" /> Appearance</TabsTrigger>
             <TabsTrigger value="scenario"><MessageCircleQuestion className="mr-2 h-4 w-4" /> Scenario</TabsTrigger>
@@ -225,57 +185,70 @@ export default function CustomizationPanel({
                 <CardTitle className="text-lg">General</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                    <Label htmlFor="chatbotName">Chatbot Name</Label>
-                    <Input id="chatbotName" name="chatbotName" placeholder="OmniChat Assistant" value={generalSettings.chatbotName} onChange={handleGeneralSettingsChange} />
+                <div className="space-y-2">
+                    <Label htmlFor="chatbotName" className="flex items-center gap-2"><Type className="w-4 h-4"/> Chatbot Display Name</Label>
+                    <Input id="chatbotName" name="chatbotName" value={customization.chatbotName} onChange={handleInputChange} placeholder="e.g., Support Pro" />
                 </div>
-                <div>
+                <div className="space-y-2">
                     <Label htmlFor="greetingMessage">Greeting Message</Label>
-                    <Textarea id="greetingMessage" name="greetingMessage" placeholder="Hello! How can I help you today?" value={generalSettings.greetingMessage} onChange={handleGeneralSettingsChange} />
+                    <Textarea id="greetingMessage" name="greetingMessage" value={customization.greetingMessage} onChange={handleInputChange} placeholder="Hello! How can I help you today?" />
                 </div>
-                <div>
+                <div className="space-y-2">
                     <Label htmlFor="aiPersona">AI Persona</Label>
-                    <Textarea id="aiPersona" name="aiPersona" placeholder="You are a friendly and helpful assistant." value={generalSettings.aiPersona} onChange={handleGeneralSettingsChange} rows={4}/>
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={handleSaveGeneralSettings} disabled={!isGeneralSettingsDirty || isSaving}>
-                    <Save className="mr-2 h-4 w-4"/>
-                    {isSaving ? 'Saving...' : 'Save General'}
-                  </Button>
+                    <Textarea id="aiPersona" name="aiPersona" value={customization.aiPersona} onChange={handleInputChange} placeholder="You are a friendly and helpful assistant." rows={4}/>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Branding</CardTitle>
+                <CardTitle className="text-lg">Branding &amp; Colors</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="primaryColor">Primary Color</Label>
-                    <Input id="primaryColor" name="primaryColor" type="color" value={customization.primaryColor} onChange={handleColorChange} className="p-1"/>
+                    <Input id="primaryColor" name="primaryColor" type="color" value={customization.primaryColor} onChange={handleColorChange} className="p-1 h-10"/>
                   </div>
                   <div>
                     <Label htmlFor="accentColor">Accent Color</Label>
-                    <Input id="accentColor" name="accentColor" type="color" value={customization.accentColor} onChange={handleColorChange} className="p-1"/>
+                    <Input id="accentColor" name="accentColor" type="color" value={customization.accentColor} onChange={handleColorChange} className="p-1 h-10"/>
+                  </div>
+                   <div>
+                    <Label htmlFor="backgroundColor">Background Color</Label>
+                    <Input id="backgroundColor" name="backgroundColor" type="color" value={customization.backgroundColor} onChange={handleColorChange} className="p-1 h-10"/>
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="backgroundColor">Background Color</Label>
-                  <Input id="backgroundColor" name="backgroundColor" type="color" value={customization.backgroundColor} onChange={handleColorChange} className="p-1"/>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="logo">Logo</Label>
-                  {customization.logoUrl && <Avatar><AvatarImage src={customization.logoUrl} alt="Logo" /></Avatar>}
-                  <Input id="logo" type="file" onChange={(e) => handleFileChange(e, 'logoUrl')} accept="image/*" />
-                </div>
-                <div>
-                  <Label htmlFor="chatbotIcon">Chatbot Icon</Label>
-                  <Input id="chatbotIcon" type="file" onChange={(e) => handleFileChange(e, 'chatbotIconUrl')} accept="image/*" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4"/> Logo</Label>
+                        <div className="flex items-center gap-4">
+                            <Avatar>
+                                <AvatarImage src={customization.logoUrl || ''} alt="Logo Preview" />
+                                <AvatarFallback><Bot /></AvatarFallback>
+                            </Avatar>
+                            <Input id="logo" type="file" onChange={(e) => handleFileChange(e, 'logoUrl')} accept="image/*" />
+                        </div>
+                    </div>
+                     <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Bot className="w-4 h-4"/> Chatbot Icon</Label>
+                         <div className="flex items-center gap-4">
+                            <Avatar>
+                                <AvatarImage src={customization.chatbotIconUrl || ''} alt="Chatbot Icon Preview" />
+                                <AvatarFallback><Bot /></AvatarFallback>
+                            </Avatar>
+                            <Input id="chatbotIcon" type="file" onChange={(e) => handleFileChange(e, 'chatbotIconUrl')} accept="image/*" />
+                        </div>
+                    </div>
                 </div>
               </CardContent>
             </Card>
+             <div className="flex justify-end">
+                  <Button onClick={handleSaveCustomization} disabled={isSaving}>
+                    <Save className="mr-2 h-4 w-4"/>
+                    {isSaving ? 'Saving Appearance...' : 'Save Appearance'}
+                  </Button>
+                </div>
           </TabsContent>
           <TabsContent value="scenario" className="pt-4">
             <ScenarioEditor initialScenario={scenario} setScenario={setScenario} />
