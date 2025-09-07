@@ -4,6 +4,11 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     // Other experimental features can go here.
+      // Thêm domain/IP mà Anh dùng để dev
+    allowedDevOrigins: [
+      "http://localhost:3000",
+      "http://172.16.29.251:9002"
+    ],
   },
   async headers() {
     return [

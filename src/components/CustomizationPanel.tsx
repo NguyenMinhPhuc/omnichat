@@ -1,22 +1,23 @@
-
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Palette, History, MessageCircleQuestion, Database, Save, PlusCircle, Trash2, Pencil, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import type { CustomizationState, ScenarioItem, KnowledgeSource } from './Dashboard';
 import { useAuth } from '@/context/AuthContext';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
 import ScenarioEditor from './ScenarioEditor';
 import { Button } from './ui/button';
 import { addKnowledgeSource, updateKnowledgeSource, deleteKnowledgeSource } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import MarkdownEditor from './MarkdownEditor';
+import { uploadFile } from '@/lib/storage';
 
 interface CustomizationPanelProps {
   customization: CustomizationState;
@@ -63,30 +65,93 @@ export default function CustomizationPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSource, setCurrentSource] = useState<Partial<KnowledgeSource> | null>(null);
+  
+  const [generalSettings, setGeneralSettings] = useState({
+    chatbotName: '',
+    greetingMessage: '',
+    aiPersona: '',
+  });
 
-  const updateFirestoreCustomization = async (data: any) => {
+  const [isGeneralSettingsDirty, setIsGeneralSettingsDirty] = useState(false);
+
+  useEffect(() => {
+    setGeneralSettings({
+      chatbotName: customization.chatbotName,
+      greetingMessage: customization.greetingMessage,
+      aiPersona: customization.aiPersona,
+    });
+  }, [customization]);
+
+  const updateFirestoreCustomization = async (field: string, value: any) => {
     if (!user) return;
-    const userDocRef = doc(db, 'users', user.uid);
-    await setDoc(userDocRef, data, { merge: true });
+    console.log('Updating firestore', field, value);
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        [`customization.${field}`]: value
+      });
+      toast({ title: "Success", description: `${field.charAt(0).toUpperCase() + field.slice(1)} updated.` });
+    } catch (e) {
+      const error = e as Error;
+      console.error('Firestore update error', error);
+      toast({ title: "Error", description: error.message, variant: "destructive"});
+    }
+  };
+
+  const handleGeneralSettingsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setGeneralSettings({ ...generalSettings, [e.target.name]: e.target.value });
+    setIsGeneralSettingsDirty(true);
+  };
+
+  const handleSaveGeneralSettings = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        'customization.chatbotName': generalSettings.chatbotName,
+        'customization.greetingMessage': generalSettings.greetingMessage,
+        'customization.aiPersona': generalSettings.aiPersona,
+      });
+      setCustomization({ ...customization, ...generalSettings });
+      setIsGeneralSettingsDirty(false);
+      toast({ title: "Success", description: "General settings saved." });
+    } catch (e) {
+      const error = e as Error;
+      toast({ title: "Error", description: error.message, variant: "destructive"});
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newCustomization = { ...customization, [e.target.name]: e.target.value };
-    setCustomization(newCustomization);
-    updateFirestoreCustomization({ customization: newCustomization });
+    const { name, value } = e.target;
+    setCustomization({ ...customization, [name]: value });
+    updateFirestoreCustomization(name, value);
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'chatbotIconUrl') => {
+    console.log('handleFileChange called for field:', field);
     if (e.target.files && e.target.files[0]) {
-      const logoFile = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const logoUrl = reader.result as string;
-        const newCustomization = { ...customization, logoUrl };
-        setCustomization(newCustomization);
-        updateFirestoreCustomization({ customization: newCustomization });
-      };
-      reader.readAsDataURL(logoFile);
+      const file = e.target.files[0];
+      console.log('File selected:', file.name);
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+      const path = `users/${user.uid}/${field}`;
+      console.log('Uploading to path:', path);
+      try {
+        const downloadURL = await uploadFile(file, path);
+        console.log('Upload successful, download URL:', downloadURL);
+        setCustomization({ ...customization, [field]: downloadURL });
+        console.log('Local customization state updated.');
+        await updateFirestoreCustomization(field, downloadURL);
+        console.log('Firestore update initiated.');
+      } catch (error) {
+        console.error('Upload or update error', error);
+        toast({ title: "Error", description: "File upload failed.", variant: "destructive"});
+      }
     }
   };
 
@@ -154,27 +219,63 @@ export default function CustomizationPanel({
             <TabsTrigger value="knowledge"><Database className="mr-2 h-4 w-4" /> Knowledge</TabsTrigger>
             <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> History</TabsTrigger>
           </TabsList>
-          <TabsContent value="appearance" className="pt-4">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+          <TabsContent value="appearance" className="pt-4 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">General</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="primaryColor">Primary Color</Label>
-                  <Input id="primaryColor" name="primaryColor" type="color" value={customization.primaryColor} onChange={handleColorChange} className="p-1"/>
+                    <Label htmlFor="chatbotName">Chatbot Name</Label>
+                    <Input id="chatbotName" name="chatbotName" placeholder="OmniChat Assistant" value={generalSettings.chatbotName} onChange={handleGeneralSettingsChange} />
                 </div>
                 <div>
-                  <Label htmlFor="accentColor">Accent Color</Label>
-                  <Input id="accentColor" name="accentColor" type="color" value={customization.accentColor} onChange={handleColorChange} className="p-1"/>
+                    <Label htmlFor="greetingMessage">Greeting Message</Label>
+                    <Textarea id="greetingMessage" name="greetingMessage" placeholder="Hello! How can I help you today?" value={generalSettings.greetingMessage} onChange={handleGeneralSettingsChange} />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="backgroundColor">Background Color</Label>
-                <Input id="backgroundColor" name="backgroundColor" type="color" value={customization.backgroundColor} onChange={handleColorChange} className="p-1"/>
-              </div>
-              <div>
-                <Label htmlFor="logo">Logo</Label>
-                <Input id="logo" type="file" onChange={handleLogoChange} accept="image/*" />
-              </div>
-            </div>
+                <div>
+                    <Label htmlFor="aiPersona">AI Persona</Label>
+                    <Textarea id="aiPersona" name="aiPersona" placeholder="You are a friendly and helpful assistant." value={generalSettings.aiPersona} onChange={handleGeneralSettingsChange} rows={4}/>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleSaveGeneralSettings} disabled={!isGeneralSettingsDirty || isSaving}>
+                    <Save className="mr-2 h-4 w-4"/>
+                    {isSaving ? 'Saving...' : 'Save General'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Branding</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="primaryColor">Primary Color</Label>
+                    <Input id="primaryColor" name="primaryColor" type="color" value={customization.primaryColor} onChange={handleColorChange} className="p-1"/>
+                  </div>
+                  <div>
+                    <Label htmlFor="accentColor">Accent Color</Label>
+                    <Input id="accentColor" name="accentColor" type="color" value={customization.accentColor} onChange={handleColorChange} className="p-1"/>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="backgroundColor">Background Color</Label>
+                  <Input id="backgroundColor" name="backgroundColor" type="color" value={customization.backgroundColor} onChange={handleColorChange} className="p-1"/>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Label htmlFor="logo">Logo</Label>
+                  {customization.logoUrl && <Avatar><AvatarImage src={customization.logoUrl} alt="Logo" /></Avatar>}
+                  <Input id="logo" type="file" onChange={(e) => handleFileChange(e, 'logoUrl')} accept="image/*" />
+                </div>
+                <div>
+                  <Label htmlFor="chatbotIcon">Chatbot Icon</Label>
+                  <Input id="chatbotIcon" type="file" onChange={(e) => handleFileChange(e, 'chatbotIconUrl')} accept="image/*" />
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="scenario" className="pt-4">
             <ScenarioEditor initialScenario={scenario} setScenario={setScenario} />

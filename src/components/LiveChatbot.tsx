@@ -6,7 +6,7 @@ import { Send, Bot, User } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
@@ -34,6 +34,9 @@ interface CustomizationState {
   backgroundColor: string;
   accentColor: string;
   logoUrl: string | null;
+  chatbotName: string;
+  greetingMessage: string;
+  chatbotIconUrl: string | null;
 }
 
 const defaultCustomization: CustomizationState = {
@@ -41,6 +44,9 @@ const defaultCustomization: CustomizationState = {
     backgroundColor: '#F0F8FF',
     accentColor: '#6495ED',
     logoUrl: null,
+    chatbotName: 'AI Assistant',
+    greetingMessage: 'Hello! How can I help you?',
+    chatbotIconUrl: null,
 };
 
 interface LiveChatbotProps {
@@ -50,12 +56,7 @@ interface LiveChatbotProps {
 export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   const [customization, setCustomization] = useState<CustomizationState | null>(null);
   const [scenario, setScenario] = useState<ScenarioItem[]>([]);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      sender: 'ai',
-      text: "Hello! How can I help you?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +69,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
       if (!chatbotId) {
         setError("Invalid chatbot ID.");
         setCustomization(defaultCustomization);
+        setMessages([{ sender: 'ai', text: defaultCustomization.greetingMessage }]);
         return;
       }
       try {
@@ -76,17 +78,21 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setCustomization(data.customization || defaultCustomization);
+          const fetchedCustomization = { ...defaultCustomization, ...data.customization };
+          setCustomization(fetchedCustomization);
+          setMessages([{ sender: 'ai', text: fetchedCustomization.greetingMessage }]);
           const savedScenario = data.scenario || [];
           setScenario(savedScenario);
           setCurrentScriptedQuestions(savedScenario.filter((item: ScenarioItem) => item.parentId === null));
         } else {
           console.warn(`Chatbot configuration not found for ID: ${chatbotId}. Using default.`);
           setCustomization(defaultCustomization);
+          setMessages([{ sender: 'ai', text: defaultCustomization.greetingMessage }]);
         }
       } catch (err) {
         setError("Failed to load chatbot configuration. Using default.");
         setCustomization(defaultCustomization);
+        setMessages([{ sender: 'ai', text: defaultCustomization.greetingMessage }]);
         console.error(err);
       }
     };
@@ -127,7 +133,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     });
   }
 
-  const handleFreeformMessage = async (text: string) => {
+  const handleFreeformMessage = async (text: string, flowName?: string) => {
     setIsAiTyping(true);
     setInputValue('');
     setCurrentScriptedQuestions([]); // Hide suggestions when user types
@@ -145,7 +151,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
         return;
     }
 
-    const aiResult = await getAIResponse({ query: text, userId: chatbotId });
+    const aiResult = await getAIResponse({ query: text, userId: chatbotId, flowName });
     const aiMessage: Message = { sender: 'ai', text: aiResult.response };
     setMessages(prev => [...prev, aiMessage]);
     await addMessageToChat(currentChatId, aiMessage);
@@ -204,10 +210,11 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
             <div className="flex items-center space-x-3">
               <Logo logoUrl={customization.logoUrl} />
               <div className="flex flex-col">
-                <h2 className="font-bold text-lg font-headline">AI Assistant</h2>
+                <h2 className="font-bold text-lg font-headline">{customization.chatbotName}</h2>
                 <p className="text-xs text-primary-foreground/80">Online</p>
               </div>
             </div>
+            <Button onClick={() => handleFreeformMessage("Start lead qualification", 'leadQualificationFlow')} size="sm" variant="secondary">Start Lead Qual</Button>
           </CardHeader>
           <CardContent className="flex-1 p-0 bg-[--chat-bg-color]">
             <ScrollArea className="h-full" ref={scrollAreaRef}>
@@ -216,6 +223,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                   <div key={index} className={cn('flex items-end gap-2', message.sender === 'user' ? 'justify-end' : 'justify-start')}>
                     {message.sender === 'ai' && (
                       <Avatar className="h-8 w-8">
+                        <AvatarImage src={customization.chatbotIconUrl || ''} alt="Chatbot" />
                         <AvatarFallback style={{backgroundColor: customization.accentColor}}>
                             <Bot className="text-white" />
                         </AvatarFallback>
@@ -243,6 +251,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                  {isAiTyping && (
                     <div className="flex items-end gap-2 justify-start">
                         <Avatar className="h-8 w-8">
+                            <AvatarImage src={customization.chatbotIconUrl || ''} alt="Chatbot" />
                             <AvatarFallback style={{backgroundColor: customization.accentColor}}>
                                 <Bot className="text-white" />
                             </AvatarFallback>

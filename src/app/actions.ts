@@ -2,6 +2,8 @@
 'use server';
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
+import { runLeadQualificationFlow } from '@/ai/flows/lead-qualification-flow';
+import { genkit } from 'genkit';
 import { IntelligentAIResponseOutput } from '@/ai/schemas';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
@@ -40,10 +42,12 @@ function getDb() {
 export async function getAIResponse({
   query,
   userId,
+  flowName = 'intelligentAIResponseFlow',
 }: {
   query: string;
   userId: string;
-}): Promise<IntelligentAIResponseOutput> {
+  flowName?: string;
+}): Promise<any> {
   try {
     const firestore = getDb();
     let knowledgeBaseParts: string[] = [];
@@ -87,12 +91,17 @@ export async function getAIResponse({
 
     const combinedKnowledgeBase = knowledgeBaseParts.join('\n\n---\n\n');
 
-    const result = await intelligentAIResponseFlow({
-      query,
-      userId,
-      knowledgeBase: combinedKnowledgeBase,
-      apiKey: userApiKey,
-    });
+    let result: any;
+    if (flowName === 'leadQualificationFlow') {
+      result = await runLeadQualificationFlow(query);
+    } else {
+      result = await intelligentAIResponseFlow({
+        query,
+        userId,
+        knowledgeBase: combinedKnowledgeBase,
+        apiKey: userApiKey,
+      });
+    }
 
     // Restore the logic to update monthly usage statistics
     if (result.totalTokens !== undefined && result.chatRequestCount !== undefined && firestore) {
