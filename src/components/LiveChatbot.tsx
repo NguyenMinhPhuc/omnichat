@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase';
 import { Badge } from './ui/badge';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import { leadQualificationFlow } from '@/ai/flows/lead-qualification-flow';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -132,8 +133,34 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
       messages: arrayUnion(message)
     });
   }
+  
+  const handleFlowMessage = async (flowName: string, data: any) => {
+    const text = `Triggering flow: ${flowName}`;
+    const userMessage: Message = { sender: 'user', text };
+    setMessages(prev => [...prev, userMessage]);
+    setIsAiTyping(true);
 
-  const handleFreeformMessage = async (text: string, flowName?: string) => {
+    let currentChatId = chatId;
+     if (!currentChatId) {
+        currentChatId = await createNewChatSession(userMessage);
+    } else {
+        await addMessageToChat(currentChatId, userMessage);
+    }
+    if (!currentChatId) {
+        setIsAiTyping(false);
+        return;
+    }
+
+    const aiResult = await getAIResponse({ query: data, userId: chatbotId, flowName });
+    const aiMessage: Message = { sender: 'ai', text: aiResult.response };
+    setMessages(prev => [...prev, aiMessage]);
+    await addMessageToChat(currentChatId, aiMessage);
+    
+    setIsAiTyping(false);
+  }
+
+
+  const handleFreeformMessage = async (text: string) => {
     setIsAiTyping(true);
     setInputValue('');
     setCurrentScriptedQuestions([]); // Hide suggestions when user types
@@ -151,7 +178,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
         return;
     }
 
-    const aiResult = await getAIResponse({ query: text, userId: chatbotId, flowName });
+    const aiResult = await getAIResponse({ query: text, userId: chatbotId });
     const aiMessage: Message = { sender: 'ai', text: aiResult.response };
     setMessages(prev => [...prev, aiMessage]);
     await addMessageToChat(currentChatId, aiMessage);
@@ -214,7 +241,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                 <p className="text-xs text-primary-foreground/80">Online</p>
               </div>
             </div>
-            <Button onClick={() => handleFreeformMessage("Start lead qualification", 'leadQualificationFlow')} size="sm" variant="secondary">Start Lead Qual</Button>
+            <Button onClick={() => handleFlowMessage('leadQualificationFlow', { need: "I want to ask about pricing" })} size="sm" variant="secondary">Start Lead Qual</Button>
           </CardHeader>
           <CardContent className="flex-1 p-0 bg-[--chat-bg-color]">
             <ScrollArea className="h-full" ref={scrollAreaRef}>

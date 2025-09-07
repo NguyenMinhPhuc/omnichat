@@ -89,4 +89,8 @@ export async function leadQualificationFlow(
 }
 
 // Alias để tương thích nếu anh muốn gọi bằng tên khác
-export { leadQualificationFlow as runLeadQualificationFlow };
+export async function runLeadQualificationFlow(
+  input: LeadQualificationInput
+): Promise<LeadQualificationOutput> {
+  return await leadQualificationFlow(input);
+}
