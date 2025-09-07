@@ -11,10 +11,9 @@ const nextConfig = {
     ],
   },
   // Make server-side environment variables available to Next.js
+  // Note: GOOGLE_APPLICATION_CREDENTIALS is automatically picked up by Firebase Admin SDK
+  // and does not need to be explicitly exposed here.
   env: {
-    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-    FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-    FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   },
   async headers() {
@@ -42,3 +41,5 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
+    

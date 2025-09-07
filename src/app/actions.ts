@@ -11,34 +11,15 @@ import type { KnowledgeSource } from '@/components/Dashboard';
 let db: Firestore;
 let adminApp: App;
 
-// Construct the service account object from environment variables
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  // Replace escaped newlines from environment variable
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
-
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
- * Ensures that initialization only happens once and that all required environment variables are set.
+ * It automatically uses GOOGLE_APPLICATION_CREDENTIALS environment variable.
  */
 function getDb(): Firestore {
-    if (!serviceAccount.projectId) {
-        throw new Error('FIREBASE_PROJECT_ID is not set in .env.local');
-    }
-    if (!serviceAccount.clientEmail) {
-        throw new Error('FIREBASE_CLIENT_EMAIL is not set in .env.local');
-    }
-    if (!serviceAccount.privateKey) {
-        throw new Error('FIREBASE_PRIVATE_KEY is not set in .env.local');
-    }
-
     if (!getApps().length) {
-        // Initialize the app if it hasn't been initialized yet
-        adminApp = initializeApp({
-            credential: cert(serviceAccount),
-        });
+        // When no arguments are provided, initializeApp() automatically looks for
+        // the GOOGLE_APPLICATION_CREDENTIALS environment variable.
+        adminApp = initializeApp();
     } else {
         // Get the already initialized app
         adminApp = getApps()[0]!;
@@ -353,7 +334,5 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
         return { success: false, message: `Failed to update lead status: ${errorMessage}` };
     }
 }
-
-    
 
     
