@@ -20,10 +20,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -41,6 +37,8 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 
 interface Lead {
   id: string;
@@ -59,9 +57,6 @@ export default function LeadsManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [displayName, setDisplayName] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<'user' | 'admin' | null>(null);
   
   useEffect(() => {
      if (user) {
@@ -239,14 +234,13 @@ export default function LeadsManagement() {
                     <TableHead>Nhu cầu</TableHead>
                     <TableHead>Ngày ghi nhận</TableHead>
                     <TableHead>Trạng thái</TableHead>
-                    <TableHead className="text-right">Hành động</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                       Array.from({ length: 5 }).map((_, i) => (
                         <TableRow key={i}>
-                            <TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell>
+                            <TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell>
                         </TableRow>
                       ))
                   ) : filteredLeads.length > 0 ? (
@@ -260,36 +254,27 @@ export default function LeadsManagement() {
                             <TableCell className="max-w-xs truncate">{lead.needs}</TableCell>
                             <TableCell>{format(new Date(lead.createdAt), 'dd/MM/yyyy HH:mm')}</TableCell>
                             <TableCell>
-                                <Badge variant={lead.status === 'consulted' ? 'default' : 'secondary'} className={lead.status === 'consulted' ? 'bg-green-500 hover:bg-green-600' : ''}>
-                                    {lead.status === 'waiting' ? 'Đang đợi' : 'Đã tư vấn'}
-                                </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Đổi trạng thái</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'waiting')}>
-                                        <Clock className="mr-2 h-4 w-4" />
-                                        Đang đợi
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(lead.id, 'consulted')}>
-                                        <CheckCircle className="mr-2 h-4 w-4" />
-                                        Đã tư vấn
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                                </DropdownMenu>
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id={`status-switch-${lead.id}`}
+                                        checked={lead.status === 'consulted'}
+                                        onCheckedChange={(checked) => 
+                                            handleStatusChange(lead.id, checked ? 'consulted' : 'waiting')
+                                        }
+                                        aria-label="Lead status"
+                                    />
+                                    <Label htmlFor={`status-switch-${lead.id}`}>
+                                        <Badge variant={lead.status === 'consulted' ? 'default' : 'secondary'} className={lead.status === 'consulted' ? 'bg-green-500 hover:bg-green-600' : ''}>
+                                            {lead.status === 'waiting' ? 'Đang đợi' : 'Đã tư vấn'}
+                                        </Badge>
+                                    </Label>
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
+                        <TableCell colSpan={5} className="h-24 text-center">
                             Không tìm thấy khách hàng nào.
                         </TableCell>
                     </TableRow>
