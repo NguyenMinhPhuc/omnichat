@@ -149,6 +149,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
 
     let currentChatId = chatId;
     if (!currentChatId) {
+        // This case should not happen if handleSubmit logic is correct, but as a fallback
         currentChatId = await createNewChatSession(currentMessages[currentMessages.length - 1]);
     }
 
@@ -189,6 +190,8 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
             }
             // Switch back to the intelligent flow
             setActiveFlow('intelligent');
+            // Show root questions to guide the user to continue chatting
+            setCurrentScriptedQuestions(scenario.filter(item => item.parentId === null));
         }
     }
   }
@@ -199,15 +202,11 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     setInputValue('');
     setCurrentScriptedQuestions([]); // Hide suggestions when user types
     
+    // The user message is already added by handleSubmit, we just need the chatId
     let currentChatId = chatId;
-    const userMessage: Message = { sender: 'user', text };
     if (!currentChatId) {
-        currentChatId = await createNewChatSession(userMessage);
-    } else {
-        await addMessageToChat(currentChatId, userMessage);
-    }
-
-    if (!currentChatId) {
+        // This should not happen if handleSubmit is correct.
+        console.error("Chat ID is missing in handleFreeformMessage");
         setIsAiTyping(false);
         return;
     }
@@ -242,12 +241,27 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     setCurrentScriptedQuestions(nextQuestions.length > 0 ? nextQuestions : scenario.filter(item => item.parentId === null));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || !chatbotId) return;
+
     const userMessage: Message = { sender: 'user', text: inputValue };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+
+    // Ensure chatId exists and user message is logged before calling AI
+    let currentChatId = chatId;
+    if (!currentChatId) {
+        currentChatId = await createNewChatSession(userMessage);
+    } else {
+        await addMessageToChat(currentChatId, userMessage);
+    }
+    
+    if (!currentChatId) {
+        setIsAiTyping(false);
+        setError("Could not save chat session. Please refresh.");
+        return;
+    }
 
     if (activeFlow === 'leadCapture') {
         handleLeadCapture(newMessages);
@@ -258,7 +272,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
 
   const startLeadCaptureFlow = () => {
     setActiveFlow('leadCapture');
-    setLeadCaptureComplete(false);
+    setLeadCaptureComplete(false); // Reset completion state
     setCapturedLead(null);
     const startMessage: Message = { sender: 'ai', text: "Để có thể hỗ trợ tốt nhất, bạn vui lòng cho tôi biết một vài thông tin nhé. Đầu tiên, tên của bạn là gì?" };
     const newMessages = [...messages, startMessage];
@@ -302,7 +316,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                 <p className="text-xs text-primary-foreground/80">Online</p>
               </div>
             </div>
-            <Button onClick={startLeadCaptureFlow} size="sm" variant="secondary" disabled={activeFlow === 'leadCapture'}>
+            <Button onClick={startLeadCaptureFlow} size="sm" variant="secondary" disabled={activeFlow === 'leadCapture' && !leadCaptureComplete}>
                 <Zap className="mr-2 h-4 w-4" />
                 Tư vấn ngay
             </Button>
@@ -355,15 +369,15 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                     </div>
                 )}
               </div>
-              {!isAiTyping && leadCaptureComplete && (
-                  <div className="p-4">
+              {leadCaptureComplete && (
+                  <div className="p-4 pt-0">
                       <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                           <Check className="mr-2 h-4 w-4"/>
                           Cảm ơn bạn! Thông tin đã được ghi nhận.
                       </Badge>
                   </div>
               )}
-              {!isAiTyping && !leadCaptureComplete && activeFlow === 'intelligent' && currentScriptedQuestions.length > 0 && (
+              {!isAiTyping && activeFlow === 'intelligent' && currentScriptedQuestions.length > 0 && (
                 <div className="p-4 pt-0 flex flex-wrap gap-2 justify-start">
                     {currentScriptedQuestions.map(item => (
                         <Badge 
@@ -383,14 +397,14 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
             <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
               <Input
                 type="text"
-                placeholder={leadCaptureComplete ? "Cảm ơn bạn! Chat đã kết thúc." : "Nhập tin nhắn của bạn..."}
+                placeholder="Nhập tin nhắn của bạn..."
                 value={inputValue}
                 onChange={handleInputChange}
                 className="flex-1"
                 autoComplete="off"
-                disabled={isAiTyping || leadCaptureComplete}
+                disabled={isAiTyping}
               />
-              <Button type="submit" size="icon" disabled={!inputValue.trim() || isAiTyping || leadCaptureComplete} style={{backgroundColor: customization.primaryColor}}>
+              <Button type="submit" size="icon" disabled={!inputValue.trim() || isAiTyping} style={{backgroundColor: customization.primaryColor}}>
                 <Send className="h-4 w-4" />
                 <span className="sr-only">Send</span>
               </Button>
