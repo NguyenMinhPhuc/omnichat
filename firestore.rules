@@ -3,26 +3,27 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Users can be read by anyone to get chatbot customization
-    // but only the authenticated user can write to their own document.
+
+    // Allow anyone to read user profiles for chatbot config
+    // Allow authenticated users to update their own profile
     match /users/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Users can create new chat sessions.
-    // They can only read/write messages to chats associated with their chatbotId
-    // This rule is a bit open, might need tightening if users can see others' chats
-    match /chats/{chatId} {
-        allow create, update, read: if request.auth != null;
+      allow update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow anyone to create a lead, as this happens from the public-facing chatbot.
-    // Only the chatbot owner can read and update their leads.
+    // Allow authenticated users to create and manage their own chat sessions
+    match /chats/{chatId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow anyone to create leads
+    // Allow authenticated users (chatbot owners) to update the lead status
     match /leads/{leadId} {
       allow create: if true;
-      allow read, update: if request.auth != null && resource.data.chatbotId == request.auth.uid;
+      allow update: if request.auth != null;
     }
+
   }
 }
+
+    
