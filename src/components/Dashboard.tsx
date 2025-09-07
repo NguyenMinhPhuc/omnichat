@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, LogOut, Settings, User, ShieldCheck, Code } from 'lucide-react';
+import { Bot, LogOut, Settings, User, ShieldCheck, Code, Users2 } from 'lucide-react';
 import CustomizationPanel from './CustomizationPanel';
 import ChatbotPreview from './ChatbotPreview';
 import { getAIResponse } from '@/app/actions';
@@ -100,8 +100,8 @@ export default function Dashboard() {
         if (userDoc.exists()) {
           const data = userDoc.data();
           if (data.customization) {
-            setCustomization(data.customization);
-            setMessages([{ sender: 'ai', text: data.customization.greetingMessage }]);
+            setCustomization({ ...customization, ...data.customization});
+            setMessages([{ sender: 'ai', text: data.customization.greetingMessage || customization.greetingMessage }]);
           }
           if (data.scenario) {
             setScenario(data.scenario);
@@ -157,6 +157,14 @@ export default function Dashboard() {
                 <Link href="/dashboard">
                   <Settings />
                   Configuration
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/leads">
+                  <Users2 />
+                  Khách hàng
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

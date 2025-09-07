@@ -183,6 +183,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                     chatbotId: chatbotId,
                     chatId: currentChatId,
                     createdAt: serverTimestamp(),
+                    status: 'waiting', // Default status
                 });
                 console.log("Lead saved successfully!");
             } catch (leadError) {
@@ -263,7 +264,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
         return;
     }
 
-    if (activeFlow === 'leadCapture') {
+    if (activeFlow === 'leadCapture' && !leadCaptureComplete) {
         handleLeadCapture(newMessages);
     } else {
         handleFreeformMessage(inputValue);

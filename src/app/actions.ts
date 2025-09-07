@@ -2,7 +2,7 @@
 'use server';
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
-import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
+import { leadCaptureFlow } from '@/ai/flows/lead-capture-flow';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
@@ -278,4 +278,58 @@ export async function getUsersWithUsageData() {
     // Throw the error to be caught by the calling component
     throw new Error("Failed to fetch users and their usage data.");
   }
+}
+
+/**
+ * Fetches leads for a specific chatbot owner.
+ */
+export async function getLeads(userId: string) {
+    if (!userId) {
+        throw new Error("User ID is required.");
+    }
+    try {
+        const firestore = getDb();
+        const leadsQuery = firestore.collection('leads')
+                                .where('chatbotId', '==', userId)
+                                .orderBy('createdAt', 'desc');
+        const snapshot = await leadsQuery.get();
+        if (snapshot.empty) {
+            return [];
+        }
+        // Manually converting Timestamp to a serializable format (ISO string)
+        const leads = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // Ensure createdAt is serializable
+                createdAt: data.createdAt.toDate().toISOString(), 
+            };
+        });
+        return leads;
+    } catch (error) {
+        console.error("Error fetching leads:", error);
+        throw new Error("Failed to fetch leads.");
+    }
+}
+
+
+/**
+ * Updates the status of a specific lead.
+ */
+export async function updateLeadStatus(leadId: string, status: 'waiting' | 'consulted'): Promise<{ success: boolean, message: string }> {
+    if (!leadId) {
+        return { success: false, message: "Lead ID is required." };
+    }
+
+    try {
+        const firestore = getDb();
+        const leadDocRef = firestore.collection('leads').doc(leadId);
+        await updateDoc(leadDocRef, { status });
+        return { success: true, message: "Lead status updated successfully." };
+    } catch (error) {
+        console.error("Error updating lead status:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+        return { success: false, message: `Failed to update lead status: ${errorMessage}` };
+    }
 }
