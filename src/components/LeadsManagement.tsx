@@ -254,7 +254,7 @@ export default function LeadsManagement() {
                             <TableCell className="max-w-xs truncate">{lead.needs}</TableCell>
                             <TableCell>{format(new Date(lead.createdAt), 'dd/MM/yyyy HH:mm')}</TableCell>
                             <TableCell>
-                                <div className="flex items-center space-x-2">
+                                <Label className="flex items-center space-x-2 cursor-pointer">
                                     <Switch
                                         id={`status-switch-${lead.id}`}
                                         checked={lead.status === 'consulted'}
@@ -263,12 +263,10 @@ export default function LeadsManagement() {
                                         }
                                         aria-label="Lead status"
                                     />
-                                    <Label htmlFor={`status-switch-${lead.id}`}>
-                                        <Badge variant={lead.status === 'consulted' ? 'default' : 'secondary'} className={lead.status === 'consulted' ? 'bg-green-500 hover:bg-green-600' : ''}>
-                                            {lead.status === 'waiting' ? 'Đang đợi' : 'Đã tư vấn'}
-                                        </Badge>
-                                    </Label>
-                                </div>
+                                    <Badge variant={lead.status === 'consulted' ? 'default' : 'secondary'} className={lead.status === 'consulted' ? 'bg-green-500 hover:bg-green-600' : ''}>
+                                        {lead.status === 'waiting' ? 'Đang đợi' : 'Đã tư vấn'}
+                                    </Badge>
+                                </Label>
                             </TableCell>
                         </TableRow>
                     ))
