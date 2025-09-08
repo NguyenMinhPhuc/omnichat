@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Palette, History, MessageCircleQuestion, Database, Save, PlusCircle, Trash2, Pencil, BookOpen, Type, Image as ImageIcon, Link2, Bot, Loader2 } from 'lucide-react';
+import { Palette, History, MessageCircleQuestion, Database, Save, PlusCircle, Trash2, Pencil, BookOpen, Type, Image as ImageIcon, Link2, Bot, Loader2, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -413,3 +413,5 @@ export default function CustomizationPanel({
     </Card>
   );
 }
+
+    
