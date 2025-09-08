@@ -6,7 +6,7 @@ import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
 import { ingestWebpage } from '@/ai/flows/webpage-ingestion-flow';
 import type { WebpageIngestionInput, WebpageIngestionOutput } from '@/ai/schemas';
 import { getAdminDb } from '@/lib/firebase-admin';
-import type { DocumentReference, FieldValue } from 'firebase-admin/firestore';
+import type { DocumentReference } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
 import type { KnowledgeSource } from '@/components/Dashboard';
 
@@ -316,12 +316,13 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
 
 /**
  * Ingests a webpage URL and returns a title and content summary.
+ * This is a server action that calls the Genkit flow.
  */
 export async function ingestWebpageAction(
-  input: WebpageIngestionInput
+  input: Omit<WebpageIngestionInput, 'apiKey'> // The client doesn't provide the API key
 ): Promise<{ success: boolean; data?: WebpageIngestionOutput; message?: string }> {
   try {
-    // The `ingestWebpage` flow now handles API key retrieval and db initialization internally.
+    // The `ingestWebpage` function (the wrapper) will handle API key retrieval internally.
     const result = await ingestWebpage(input);
     return { success: true, data: result };
   } catch (error) {

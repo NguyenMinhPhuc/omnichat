@@ -37,8 +37,8 @@ export type LeadCaptureOutput = z.infer<typeof LeadCaptureOutputSchema>;
 // Schema for Webpage Ingestion
 export const WebpageIngestionInputSchema = z.object({
   url: z.string().url().describe('The URL of the webpage to ingest.'),
-  // The userId is added to retrieve the correct API key on the server.
   userId: z.string().describe('The ID of the user performing the ingestion.'),
+  apiKey: z.string().optional().describe('The API key to use for the Gemini model.'),
 });
 export type WebpageIngestionInput = z.infer<typeof WebpageIngestionInputSchema>;
 

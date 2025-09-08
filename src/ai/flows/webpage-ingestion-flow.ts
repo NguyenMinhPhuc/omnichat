@@ -17,6 +17,7 @@ import {
   WebpageIngestionOutputSchema
 } from '@/ai/schemas';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { googleAI } from '@genkit-ai/googleai';
 
 // This is an internal schema, not exported.
 const WebpageIngestionPromptInputSchema = z.object({
@@ -48,11 +49,47 @@ const webpageIngestionFlow = ai.defineFlow(
     inputSchema: WebpageIngestionInputSchema,
     outputSchema: WebpageIngestionOutputSchema,
   },
-  async ({ url, userId }) => {
-    try {
-      // Step 0: Get API Key for the user
+  async ({ url, apiKey }) => {
+    // Step 1: Fetch the webpage content
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.statusText}`);
+    }
+    const html = await response.text();
+
+    // Step 2: Parse the HTML and extract readable text content
+    const dom = new JSDOM(html);
+    
+    // Remove script and style elements
+    dom.window.document.querySelectorAll('script, style').forEach(elem => elem.remove());
+    
+    const textContent = dom.window.document.body.textContent || "";
+    const cleanText = textContent.replace(/\s\s+/g, ' ').trim();
+    
+    // Define the model dynamically with the provided API key
+    const model = googleAI.model('gemini-1.5-flash-latest', { apiKey });
+
+    // Step 3: Use the AI prompt to generate title and content
+    const { output } = await webpageIngestionPrompt(
+      { textContent: cleanText }, 
+      { model } // Pass the dynamically created model instance
+    );
+
+    if (!output) {
+      throw new Error('The AI model failed to generate a response.');
+    }
+    
+    return output;
+  }
+);
+
+
+// Exported async function to be called from server components/actions
+export async function ingestWebpage(input: WebpageIngestionInput): Promise<WebpageIngestionOutput> {
+   try {
+      // Step 0: Get API Key for the user. This logic is now outside the flow.
       const firestore = getAdminDb();
-      const userDocRef = firestore.collection('users').doc(userId);
+      const userDocRef = firestore.collection('users').doc(input.userId);
       const userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {
@@ -66,45 +103,13 @@ const webpageIngestionFlow = ai.defineFlow(
         throw new Error("API Key is missing for this user. Please configure it in your profile or system-wide.");
       }
 
-      // Step 1: Fetch the webpage content
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch URL: ${response.statusText}`);
-      }
-      const html = await response.text();
-
-      // Step 2: Parse the HTML and extract readable text content
-      const dom = new JSDOM(html);
-      
-      // Remove script and style elements
-      dom.window.document.querySelectorAll('script, style').forEach(elem => elem.remove());
-      
-      const textContent = dom.window.document.body.textContent || "";
-      const cleanText = textContent.replace(/\s\s+/g, ' ').trim();
-
-      // Step 3: Use the AI prompt to generate title and content
-      const { output } = await webpageIngestionPrompt(
-        { textContent: cleanText }, 
-        { model: ai.model('gemini-1.5-flash-latest', { apiKey }) }
-      );
-
-      if (!output) {
-        throw new Error('The AI model failed to generate a response.');
-      }
-      
-      return output;
+      // Now call the flow with all the necessary data, including the API key
+      return await webpageIngestionFlow({ ...input, apiKey });
 
     } catch (error) {
-      console.error('Error in webpageIngestionFlow:', error);
+      console.error('Error in ingestWebpage function:', error);
       const message = error instanceof Error ? error.message : 'An unknown error occurred during webpage ingestion.';
       // We re-throw the error to be handled by the caller, which can then display it to the user.
       throw new Error(message);
     }
-  }
-);
-
-
-// Exported async function to be called from server components/actions
-export async function ingestWebpage(input: WebpageIngestionInput): Promise<WebpageIngestionOutput> {
-  return await webpageIngestionFlow(input);
 }
