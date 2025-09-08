@@ -4,7 +4,7 @@
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getFirestore, Firestore, FieldValue, updateDoc as adminUpdateDoc } from 'firebase-admin/firestore';
+import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
 import type { KnowledgeSource } from '@/components/Dashboard';
 
@@ -323,7 +323,7 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
     try {
         const firestore = getDb();
         const leadDocRef = firestore.collection('leads').doc(leadId);
-        await adminUpdateDoc(leadDocRef, { status });
+        await leadDocRef.update({ status });
         return { success: true, message: "Lead status updated successfully." };
     } catch (error) {
         console.error("Error updating lead status:", error);
