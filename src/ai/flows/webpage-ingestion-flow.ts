@@ -15,8 +15,6 @@ import {
   WebpageIngestionOutput,
   WebpageIngestionOutputSchema
 } from '@/ai/schemas';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getApps, initializeApp } from 'firebase-admin/app';
 
@@ -66,7 +64,7 @@ const webpageIngestionFlow = ai.defineFlow(
       const userDocRef = firestore.collection('users').doc(userId);
       const userDoc = await userDocRef.get();
 
-      if (!userDoc.exists()) {
+      if (!userDoc.exists) {
         throw new Error('User not found.');
       }
       
