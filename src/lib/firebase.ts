@@ -15,17 +15,6 @@ const requiredEnvVars = [
   'NEXT_PUBLIC_FIREBASE_APP_ID',
 ];
 
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
-if (missingVars.length > 0) {
-  const errorMessage = `Missing Firebase environment variables: ${missingVars.join(', ')}. Please check your .env file.`;
-  console.error(errorMessage);
-  // Throw an error to prevent the app from trying to initialize with incomplete config
-  throw new Error(errorMessage);
-}
-// --- End Configuration Validation ---
-
-// Correctly configured Firebase config using environment variables
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -34,6 +23,15 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
+
+const missingVars = Object.entries(firebaseConfig).filter(([key, value]) => !value);
+
+if (missingVars.length > 0) {
+    const errorMessage = `Missing Firebase environment variables: ${missingVars.map(([key]) => key).join(', ')}. Please check your .env file.`;
+    // This will only log in the browser console, but it's better than nothing.
+    // The app will likely fail to connect to Firebase.
+    console.error(errorMessage);
+}
 
 
 // Initialize Firebase
