@@ -5,16 +5,6 @@ import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
-// --- Configuration Validation ---
-const requiredEnvVars = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-  'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-  'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-  'NEXT_PUBLIC_FIREBASE_APP_ID',
-];
-
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -24,15 +14,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const missingVars = Object.entries(firebaseConfig).filter(([key, value]) => !value);
+// Simple check if all required config values are present.
+const isConfigValid = Object.values(firebaseConfig).every(value => !!value);
 
-if (missingVars.length > 0) {
-    const errorMessage = `Missing Firebase environment variables: ${missingVars.map(([key]) => key).join(', ')}. Please check your .env file.`;
-    // This will only log in the browser console, but it's better than nothing.
-    // The app will likely fail to connect to Firebase.
+if (!isConfigValid) {
+    const errorMessage = `Missing one or more Firebase environment variables (starting with NEXT_PUBLIC_). Please check your .env.local file and restart the server.`;
     console.error(errorMessage);
+    // You might want to throw an error in development to halt execution
+    if (process.env.NODE_ENV === 'development') {
+        throw new Error(errorMessage);
+    }
 }
-
 
 // Initialize Firebase
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
