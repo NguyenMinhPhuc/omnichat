@@ -64,14 +64,13 @@ export default function LeadsManagement() {
         setIsLoading(true);
         try {
             const leadsData = await getLeads(user.uid);
-            // Sort leads on the client-side
             const sortedLeads = (leadsData as Lead[]).sort((a, b) => 
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
             setLeads(sortedLeads);
         } catch (error) {
             console.error("Failed to fetch data:", error);
-            toast({ title: 'Lỗi', description: 'Không thể tải danh sách khách hàng.', variant: 'destructive' });
+            toast({ title: 'Error', description: 'Could not load leads.', variant: 'destructive' });
         } finally {
             setIsLoading(false);
         }
@@ -84,9 +83,9 @@ export default function LeadsManagement() {
     const result = await updateLeadStatus(leadId, status);
     if (result.success) {
       setLeads(leads.map(lead => lead.id === leadId ? { ...lead, status } : lead));
-      toast({ title: 'Thành công', description: 'Đã cập nhật trạng thái khách hàng.' });
+      toast({ title: 'Success', description: 'Lead status has been updated.' });
     } else {
-      toast({ title: 'Lỗi', description: result.message, variant: 'destructive' });
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
   };
 
@@ -122,7 +121,7 @@ export default function LeadsManagement() {
               <SidebarMenuButton asChild>
                 <Link href="/dashboard">
                   <Settings />
-                  Cấu hình
+                  Configuration
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -130,7 +129,7 @@ export default function LeadsManagement() {
               <SidebarMenuButton asChild isActive>
                 <Link href="/dashboard/leads">
                   <Users2 />
-                  Khách hàng
+                  Leads
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -138,7 +137,7 @@ export default function LeadsManagement() {
               <SidebarMenuButton asChild>
                 <Link href="/dashboard/embed">
                   <Code />
-                  Tích hợp
+                  Embed
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -146,7 +145,7 @@ export default function LeadsManagement() {
               <SidebarMenuButton asChild>
                 <Link href="/profile">
                   <User />
-                  Hồ sơ
+                  Profile
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -159,7 +158,7 @@ export default function LeadsManagement() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="hidden md:flex" />
-              <h1 className="font-semibold text-lg">Quản lý Khách hàng</h1>
+              <h1 className="font-semibold text-lg">Leads Management</h1>
             </div>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -185,12 +184,12 @@ export default function LeadsManagement() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push('/profile')}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Hồ sơ</span>
+                    <span>Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Đăng xuất</span>
+                    <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -200,14 +199,14 @@ export default function LeadsManagement() {
             <Card>
             <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <CardTitle className="flex items-center gap-2"><Users2 /> Danh sách Khách hàng</CardTitle>
-                <CardDescription>Xem và quản lý các khách hàng tiềm năng đã được thu thập.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><Users2 /> Leads List</CardTitle>
+                <CardDescription>View and manage collected potential customers.</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
-                        placeholder="Tìm theo tên hoặc SĐT..."
+                        placeholder="Search by name or phone..."
                         className="w-full md:w-64 pl-10"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -215,12 +214,12 @@ export default function LeadsManagement() {
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Lọc trạng thái" />
+                        <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                        <SelectItem value="waiting">Đang đợi</SelectItem>
-                        <SelectItem value="consulted">Đã tư vấn</SelectItem>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="waiting">Waiting</SelectItem>
+                        <SelectItem value="consulted">Consulted</SelectItem>
                     </SelectContent>
                 </Select>
               </div>
@@ -229,11 +228,11 @@ export default function LeadsManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">STT</TableHead>
-                    <TableHead>Khách hàng</TableHead>
-                    <TableHead>Nhu cầu</TableHead>
-                    <TableHead>Ngày ghi nhận</TableHead>
-                    <TableHead>Trạng thái</TableHead>
+                    <TableHead className="w-[50px]">#</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Needs</TableHead>
+                    <TableHead>Date Captured</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -254,7 +253,7 @@ export default function LeadsManagement() {
                             <TableCell className="max-w-xs truncate">{lead.needs}</TableCell>
                             <TableCell>{format(new Date(lead.createdAt), 'dd/MM/yyyy HH:mm')}</TableCell>
                             <TableCell>
-                                <Label className="flex items-center space-x-2 cursor-pointer">
+                                <div className="flex items-center space-x-2 cursor-pointer">
                                     <Switch
                                         id={`status-switch-${lead.id}`}
                                         checked={lead.status === 'consulted'}
@@ -264,16 +263,16 @@ export default function LeadsManagement() {
                                         aria-label="Lead status"
                                     />
                                     <Badge variant={lead.status === 'consulted' ? 'default' : 'secondary'} className={lead.status === 'consulted' ? 'bg-green-500 hover:bg-green-600' : ''}>
-                                        {lead.status === 'waiting' ? 'Đang đợi' : 'Đã tư vấn'}
+                                        {lead.status === 'waiting' ? 'Waiting' : 'Consulted'}
                                     </Badge>
-                                </Label>
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))
                   ) : (
                     <TableRow>
                         <TableCell colSpan={5} className="h-24 text-center">
-                            Không tìm thấy khách hàng nào.
+                            No leads found.
                         </TableCell>
                     </TableRow>
                   )}

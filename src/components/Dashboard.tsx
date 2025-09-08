@@ -164,7 +164,7 @@ export default function Dashboard() {
               <SidebarMenuButton asChild>
                 <Link href="/dashboard/leads">
                   <Users2 />
-                  Khách hàng
+                  Leads
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

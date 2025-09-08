@@ -279,7 +279,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     setActiveFlow('leadCapture');
     setLeadCaptureComplete(false); // Reset completion state
     setCapturedLead(null);
-    const startMessage: Message = { sender: 'ai', text: "Để có thể hỗ trợ tốt nhất, bạn vui lòng cho tôi biết một vài thông tin nhé. Đầu tiên, tên của bạn là gì?" };
+    const startMessage: Message = { sender: 'ai', text: "To provide the best support, I need a little information. First, what is your name?" };
     const newMessages = [...messages, startMessage];
     setMessages(newMessages);
     
@@ -323,7 +323,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
             </div>
             <Button onClick={startLeadCaptureFlow} size="sm" variant="secondary" disabled={activeFlow === 'leadCapture' && !leadCaptureComplete}>
                 <Zap className="mr-2 h-4 w-4" />
-                Tư vấn ngay
+                Get Consultation
             </Button>
           </CardHeader>
           <CardContent className="flex-1 p-0 bg-[--chat-bg-color]">
@@ -378,7 +378,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                   <div className="p-4 pt-0">
                       <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                           <Check className="mr-2 h-4 w-4"/>
-                          Cảm ơn bạn! Thông tin đã được ghi nhận.
+                          Thank you! Your information has been submitted.
                       </Badge>
                   </div>
               )}
@@ -402,7 +402,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
             <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
               <Input
                 type="text"
-                placeholder="Nhập tin nhắn của bạn..."
+                placeholder="Type your message..."
                 value={inputValue}
                 onChange={handleInputChange}
                 className="flex-1"

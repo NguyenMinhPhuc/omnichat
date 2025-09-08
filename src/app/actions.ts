@@ -16,7 +16,7 @@ let adminApp: App;
  * It automatically uses GOOGLE_APPLICATION_CREDENTIALS environment variable.
  */
 function getDb(): Firestore {
-    if (!getApps().length) {
+    if (getApps().length === 0) {
         // When no arguments are provided, initializeApp() automatically looks for
         // the GOOGLE_APPLICATION_CREDENTIALS environment variable.
         adminApp = initializeApp();
@@ -108,13 +108,13 @@ export async function getAIResponse({
     console.error('Error getting AI response:', error);
     if (error instanceof Error && error.message.includes('429 Too Many Requests')) {
       return {
-        response: "Xin lỗi, hiện tại tôi đang hơi quá tải một chút. Bạn vui lòng thử lại sau vài phút nhé.",
+        response: "Sorry, I'm a bit overloaded at the moment. Please try again in a few minutes.",
       };
     }
     const errorMessage =
       error instanceof Error ? error.message : 'An unexpected error occurred.';
     return {
-      response: `Lỗi xác thực: Không thể kết nối đến máy chủ AI. Vui lòng kiểm tra lại Gemini API Key của bạn (trong trang Profile) hoặc của hệ thống (nếu bạn không cung cấp key riêng). Đảm bảo API Key hợp lệ, dự án Google Cloud đã bật thanh toán và Generative Language API đã được kích hoạt.`,
+      response: `Authentication Error: Could not connect to the AI server. Please check your Gemini API Key (in your Profile page) or the system's key (if you did not provide a custom one). Ensure the API Key is valid, the Google Cloud project has billing enabled, and the Generative Language API is activated.`,
     };
   }
 }
@@ -287,24 +287,21 @@ export async function getLeads(userId: string) {
     }
     try {
         const firestore = getDb();
-        // Query without ordering to avoid composite index requirement.
         const leadsQuery = firestore.collection('leads')
                                 .where('chatbotId', '==', userId);
         const snapshot = await leadsQuery.get();
         if (snapshot.empty) {
             return [];
         }
-        // Manually converting Timestamp to a serializable format (ISO string)
         const leads = snapshot.docs.map(doc => {
             const data = doc.data();
             const createdAt = data.createdAt;
             return {
                 id: doc.id,
                 ...data,
-                // Ensure createdAt is serializable, checking if it's a Timestamp
                 createdAt: createdAt && typeof createdAt.toDate === 'function' 
                     ? createdAt.toDate().toISOString() 
-                    : new Date().toISOString(), // Fallback for invalid data
+                    : new Date().toISOString(), 
             };
         });
         return leads;

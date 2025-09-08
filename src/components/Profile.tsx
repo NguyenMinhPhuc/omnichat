@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -24,7 +25,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code, KeyRound } from 'lucide-react';
+import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code, KeyRound, Users2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -171,6 +172,14 @@ export default function Profile() {
                 <Link href="/dashboard">
                   <Settings />
                   Configuration
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/leads">
+                  <Users2 />
+                  Leads
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
