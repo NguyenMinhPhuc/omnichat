@@ -198,15 +198,12 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
   }
 
 
-  const handleFreeformMessage = async (text: string) => {
+  const handleFreeformMessage = async (text: string, currentChatId: string) => {
     setIsAiTyping(true);
     setInputValue('');
     setCurrentScriptedQuestions([]); // Hide suggestions when user types
     
-    // The user message is already added by handleSubmit, we just need the chatId
-    let currentChatId = chatId;
     if (!currentChatId) {
-        // This should not happen if handleSubmit is correct.
         console.error("Chat ID is missing in handleFreeformMessage");
         setIsAiTyping(false);
         return;
@@ -268,7 +265,13 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
     if (activeFlow === 'leadCapture' && !leadCaptureComplete) {
         handleLeadCapture(newMessages);
     } else {
-        handleFreeformMessage(inputValue);
+        // Ensure currentChatId is not null before passing
+        if (currentChatId) {
+            handleFreeformMessage(inputValue, currentChatId);
+        } else {
+            console.error("handleSubmit could not resolve a valid chatId before calling handler.");
+            setError("A session error occurred. Please refresh.");
+        }
     }
   };
 
