@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Users2, Bot, Settings, Code, User, LogOut, ShieldCheck, MoreHorizontal, CheckCircle, Clock } from 'lucide-react';
+import { Search, Users2, Bot, Settings, Code, User, LogOut, ShieldCheck, MoreHorizontal, CheckCircle, Clock, BookText } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,6 +138,14 @@ export default function LeadsManagement() {
                 <Link href="/dashboard/embed">
                   <Code />
                   Embed
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/guide">
+                  <BookText />
+                  Guide
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

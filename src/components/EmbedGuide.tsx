@@ -6,8 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Code, Copy, Info } from 'lucide-react';
+import { Code, Copy, Info, Users2, Settings, Bot, LogOut, User, BookText } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useRouter } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+
 
 interface EmbedGuideProps {
   chatbotId: string;
@@ -111,6 +136,8 @@ if (chatToggle && chatBox) {
 
 export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
   const { toast } = useToast();
+  const { user, loading, logout } = useAuth();
+  const router = useRouter();
 
   // No need for useEffect or useState for this static content
   const cssCode = getCssCode();
@@ -150,114 +177,118 @@ export default function EmbedGuide({ chatbotId }: EmbedGuideProps) {
     navigator.clipboard.writeText(text);
     toast({ title: 'Copied to clipboard!' });
   };
+  
+    if (loading || !user) {
+    return <div>Loading...</div>; // Or a loading spinner
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-headline flex items-center gap-2"><Code /> Embed Chat Bubble</CardTitle>
-        <CardDescription>Follow these steps to add a floating chat bubble to your website.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <Label htmlFor="css-code" className='text-base'>Step 1: Add the CSS</Label>
-          <p className="text-sm text-muted-foreground mb-2">
-            Add this CSS to your stylesheet or inside a `&lt;style&gt;` tag in your HTML `&lt;head&gt;`.
-          </p>
-          <div className="relative">
-            <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
-              <code>
-                {cssCode}
-              </code>
-            </pre>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 h-7 w-7"
-              onClick={() => copyToClipboard(cssCode)}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="html-code" className='text-base'>Step 2: Add the HTML</Label>
-          <p className="text-sm text-muted-foreground mb-2">
-            Paste this HTML snippet just before the closing `&lt;/body&gt;` tag of your page.
-          </p>
-          <div className="relative">
-            <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
-              <code>
-                {htmlCode}
-              </code>
-            </pre>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 h-7 w-7"
-              onClick={() => copyToClipboard(htmlCode)}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="js-code" className='text-base'>Step 3: Add the JavaScript</Label>
-          <p className="text-sm text-muted-foreground mb-2">
-            Add this JavaScript code in a `&lt;script&gt;` tag after the HTML from Step 2.
-          </p>
-          <div className="relative">
-            <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
-              <code>
-                {jsCode}
-              </code>
-            </pre>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 h-7 w-7"
-              onClick={() => copyToClipboard(jsCode)}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="full-html-code" className='text-base'>Step 4: Complete Example (All-in-One)</Label>
-          <p className="text-sm text-muted-foreground mb-2">
-            For a quick start, you can use this complete HTML file. Just copy, paste, and save it as an `.html` file.
-          </p>
-          <div className="relative">
-            <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
-              <code>
-                {fullHtmlCode}
-              </code>
-            </pre>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 h-7 w-7"
-              onClick={() => copyToClipboard(fullHtmlCode)}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Important: Testing Locally</AlertTitle>
-          <AlertDescription>
-            <p className="mb-2">
-              Due to browser security policies, opening your HTML file directly from your computer (e.g., `file:///...`) will not work. You must serve the file from a local web server.
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline flex items-center gap-2"><Code /> Embed Chat Bubble</CardTitle>
+          <CardDescription>Follow these steps to add a floating chat bubble to your website.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <Label htmlFor="css-code" className='text-base'>Step 1: Add the CSS</Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Add this CSS to your stylesheet or inside a `&lt;style&gt;` tag in your HTML `&lt;head&gt;`.
             </p>
-            <p>
-              An easy way is to use `npx serve`. In your terminal, navigate to the folder with your HTML file and run <code className="bg-muted px-1 py-0.5 rounded-sm font-semibold">npx serve</code>. Then open the `localhost` URL it provides.
+            <div className="relative">
+              <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
+                <code>
+                  {cssCode}
+                </code>
+              </pre>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-7 w-7"
+                onClick={() => copyToClipboard(cssCode)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="html-code" className='text-base'>Step 2: Add the HTML</Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Paste this HTML snippet just before the closing `&lt;/body&gt;` tag of your page.
             </p>
-          </AlertDescription>
-        </Alert>
+            <div className="relative">
+              <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
+                <code>
+                  {htmlCode}
+                </code>
+              </pre>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-7 w-7"
+                onClick={() => copyToClipboard(htmlCode)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="js-code" className='text-base'>Step 3: Add the JavaScript</Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Add this JavaScript code in a `&lt;script&gt;` tag after the HTML from Step 2.
+            </p>
+            <div className="relative">
+              <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
+                <code>
+                  {jsCode}
+                </code>
+              </pre>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-7 w-7"
+                onClick={() => copyToClipboard(jsCode)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-      </CardContent>
-    </Card>
+          <div>
+            <Label htmlFor="full-html-code" className='text-base'>Step 4: Complete Example (All-in-One)</Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              For a quick start, you can use this complete HTML file. Just copy, paste, and save it as an `.html` file.
+            </p>
+            <div className="relative">
+              <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-60">
+                <code>
+                  {fullHtmlCode}
+                </code>
+              </pre>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-7 w-7"
+                onClick={() => copyToClipboard(fullHtmlCode)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Important: Testing Locally</AlertTitle>
+            <AlertDescription>
+              <p className="mb-2">
+                Due to browser security policies, opening your HTML file directly from your computer (e.g., `file:///...`) will not work. You must serve the file from a local web server.
+              </p>
+              <p>
+                An easy way is to use `npx serve`. In your terminal, navigate to the folder with your HTML file and run <code className="bg-muted px-1 py-0.5 rounded-sm font-semibold">npx serve</code>. Then open the `localhost` URL it provides.
+              </p>
+            </AlertDescription>
+          </Alert>
+
+        </CardContent>
+      </Card>
   );
 }

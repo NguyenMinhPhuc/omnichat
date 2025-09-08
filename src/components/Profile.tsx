@@ -25,7 +25,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code, KeyRound, Users2 } from 'lucide-react';
+import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code, KeyRound, Users2, BookText } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -188,6 +188,14 @@ export default function Profile() {
                 <Link href="/dashboard/embed">
                   <Code />
                   Embed
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/guide">
+                  <BookText />
+                  Guide
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
