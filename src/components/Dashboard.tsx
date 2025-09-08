@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, LogOut, Settings, User, ShieldCheck, Code, Users2 } from 'lucide-react';
+import { Bot, LogOut, Settings, User, ShieldCheck, Code, Users2, BookText } from 'lucide-react';
 import CustomizationPanel from './CustomizationPanel';
 import ChatbotPreview from './ChatbotPreview';
 import { getAIResponse } from '@/app/actions';
@@ -173,6 +173,14 @@ export default function Dashboard() {
                 <Link href="/dashboard/embed">
                   <Code />
                   Embed
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/guide">
+                  <BookText />
+                  Guide
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

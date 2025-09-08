@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Bot, LogOut, Settings, User, ShieldCheck, Code, Users2, BookText } from 'lucide-react';
+import { Bot, LogOut, Settings, User, Code, Users2, BookText } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
@@ -29,9 +29,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
-import EmbedGuide from '@/components/EmbedGuide';
 
-export default function EmbedPage() {
+interface UserGuideLayoutProps {
+  children: React.ReactNode;
+}
+
+export default function UserGuideLayout({ children }: UserGuideLayoutProps) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
 
@@ -70,7 +73,7 @@ export default function EmbedPage() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
+              <SidebarMenuButton asChild>
                 <Link href="/dashboard/embed">
                   <Code />
                   Embed
@@ -78,7 +81,7 @@ export default function EmbedPage() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton asChild isActive>
                 <Link href="/dashboard/guide">
                   <BookText />
                   Guide
@@ -103,7 +106,7 @@ export default function EmbedPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="hidden md:flex" />
-              <h1 className="font-semibold text-lg">Embed Chatbot</h1>
+              <h1 className="font-semibold text-lg">User Guide</h1>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -138,7 +141,7 @@ export default function EmbedPage() {
           </div>
         </header>
         <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-            <EmbedGuide chatbotId={user.uid} />
+            {children}
         </main>
       </SidebarInset>
     </SidebarProvider>
