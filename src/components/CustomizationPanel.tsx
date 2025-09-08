@@ -72,6 +72,7 @@ export default function CustomizationPanel({
   // State for URL ingestion
   const [ingestionUrl, setIngestionUrl] = useState('');
   const [isIngesting, setIsIngesting] = useState(false);
+  const [ingestionError, setIngestionError] = useState<{isBlocked: boolean, message: string} | null>(null);
   const [dialogActiveTab, setDialogActiveTab] = useState('manual');
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -124,6 +125,7 @@ export default function CustomizationPanel({
     setCurrentSource(source || { title: '', content: '' });
     setIngestionUrl('');
     setDialogActiveTab('manual');
+    setIngestionError(null);
     setIsDialogOpen(true);
   };
   
@@ -178,6 +180,7 @@ export default function CustomizationPanel({
         return;
     }
     setIsIngesting(true);
+    setIngestionError(null);
     try {
         const result = await ingestWebpageAction({ url: ingestionUrl, userId: user.uid });
         if (result.success && result.data) {
@@ -185,10 +188,16 @@ export default function CustomizationPanel({
             toast({ title: "Content Generated", description: "Title and content have been populated. Review and save." });
             setDialogActiveTab('manual'); // Switch to manual tab to show the results
         } else {
-            toast({ title: "Ingestion Failed", description: result.message, variant: "destructive" });
+            const isBlocked = result.message?.startsWith('BLOCKED::');
+            const message = isBlocked ? result.message!.replace('BLOCKED::', '') : result.message!;
+            setIngestionError({ isBlocked: !!isBlocked, message: message });
+            if (!isBlocked) { // Show toast for generic errors, but not for blockages (alert is shown instead)
+                 toast({ title: "Ingestion Failed", description: message, variant: "destructive" });
+            }
         }
     } catch (e) {
         const error = e as Error;
+        setIngestionError({ isBlocked: false, message: error.message });
         toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
         setIsIngesting(false);
@@ -344,7 +353,12 @@ export default function CustomizationPanel({
         </Tabs>
       </CardContent>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+            setIsDialogOpen(isOpen);
+            if (!isOpen) {
+                setIngestionError(null);
+            }
+      }}>
           <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                   <DialogTitle>{currentSource?.id ? 'Edit' : 'Add'} Knowledge Source</DialogTitle>
@@ -399,6 +413,22 @@ export default function CustomizationPanel({
                             </div>
                             <p className="text-xs text-muted-foreground">The AI will read the page and generate a title and content summary for you.</p>
                         </div>
+
+                        {ingestionError && (
+                            <Alert variant={ingestionError.isBlocked ? "destructive" : "default"}>
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>{ingestionError.isBlocked ? "Webpage Blocked" : "Ingestion Failed"}</AlertTitle>
+                                <AlertDescription>
+                                    {ingestionError.message}
+                                    {ingestionError.isBlocked && 
+                                    <p className="mt-2 text-xs">
+                                        For websites with strong anti-bot protection, using a specialized third-party scraping API (e.g., Browserless, ScraperAPI) is recommended.
+                                    </p>
+                                    }
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        
                         <Alert>
                             <Info className="h-4 w-4" />
                             <AlertTitle>How it works</AlertTitle>

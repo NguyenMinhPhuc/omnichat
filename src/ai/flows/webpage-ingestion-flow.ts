@@ -53,13 +53,23 @@ const webpageIngestionFlow = ai.defineFlow(
   },
   async ({ url, apiKey }) => {
     // Step 1: Fetch the webpage content with a browser-like User-Agent
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
+    let response;
+    try {
+        response = await fetch(url, {
+            headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+    } catch (fetchError) {
+        console.error('Fetch failed:', fetchError);
+        throw new Error(`Failed to fetch URL. Please check the address and your network connection.`);
+    }
+
     if (!response.ok) {
-      throw new Error(`Failed to fetch URL: ${response.statusText}`);
+        if (response.status === 403) {
+             throw new Error(`BLOCKED::Access to the URL was denied (403 Forbidden). The website may have anti-scraping measures. Consider using a dedicated web scraping API service for complex sites.`);
+        }
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
     }
     const html = await response.text();
 
