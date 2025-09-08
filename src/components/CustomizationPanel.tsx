@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Palette, History, MessageCircleQuestion, Database, Save, PlusCircle, Trash2, Pencil, BookOpen, Type, Image as ImageIcon } from 'lucide-react';
+import { Palette, History, MessageCircleQuestion, Database, Save, PlusCircle, Trash2, Pencil, BookOpen, Type, Image as ImageIcon, Link2, Bot, Loader2, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
 import ScenarioEditor from './ScenarioEditor';
 import { Button } from './ui/button';
-import { addKnowledgeSource, updateKnowledgeSource, deleteKnowledgeSource } from '@/app/actions';
+import { addKnowledgeSource, updateKnowledgeSource, deleteKnowledgeSource, ingestWebpageAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,7 +41,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import MarkdownEditor from './MarkdownEditor';
 import { uploadFile } from '@/lib/storage';
-import { Bot } from 'lucide-react';
 
 
 interface CustomizationPanelProps {
@@ -69,6 +68,12 @@ export default function CustomizationPanel({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSource, setCurrentSource] = useState<Partial<KnowledgeSource> | null>(null);
   const [activeTab, setActiveTab] = useState("appearance");
+
+  // State for URL ingestion
+  const [ingestionUrl, setIngestionUrl] = useState('');
+  const [isIngesting, setIsIngesting] = useState(false);
+  const [ingestionError, setIngestionError] = useState<{isBlocked: boolean, message: string} | null>(null);
+  const [dialogActiveTab, setDialogActiveTab] = useState('manual');
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -118,6 +123,9 @@ export default function CustomizationPanel({
 
   const handleOpenDialog = (source: Partial<KnowledgeSource> | null = null) => {
     setCurrentSource(source || { title: '', content: '' });
+    setIngestionUrl('');
+    setDialogActiveTab('manual');
+    setIngestionError(null);
     setIsDialogOpen(true);
   };
   
@@ -163,6 +171,36 @@ export default function CustomizationPanel({
         toast({ title: "Success", description: "Knowledge source deleted." });
     } else {
         toast({ title: "Error", description: result.message, variant: "destructive"});
+    }
+  };
+
+  const handleIngestUrl = async () => {
+     if (!user || !ingestionUrl) {
+        toast({ title: "Error", description: "URL is required.", variant: "destructive" });
+        return;
+    }
+    setIsIngesting(true);
+    setIngestionError(null);
+    try {
+        const result = await ingestWebpageAction({ url: ingestionUrl, userId: user.uid });
+        if (result.success && result.data) {
+            setCurrentSource(prev => ({ ...prev, title: result.data!.title, content: result.data!.content }));
+            toast({ title: "Content Generated", description: "Title and content have been populated. Review and save." });
+            setDialogActiveTab('manual'); // Switch to manual tab to show the results
+        } else {
+            const isBlocked = result.message?.startsWith('BLOCKED::');
+            const message = isBlocked ? result.message!.replace('BLOCKED::', '') : result.message!;
+            setIngestionError({ isBlocked: !!isBlocked, message: message });
+            if (!isBlocked) { // Show toast for generic errors, but not for blockages (alert is shown instead)
+                 toast({ title: "Ingestion Failed", description: message, variant: "destructive" });
+            }
+        }
+    } catch (e) {
+        const error = e as Error;
+        setIngestionError({ isBlocked: false, message: error.message });
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+        setIsIngesting(false);
     }
   };
 
@@ -315,39 +353,91 @@ export default function CustomizationPanel({
         </Tabs>
       </CardContent>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+            setIsDialogOpen(isOpen);
+            if (!isOpen) {
+                setIngestionError(null);
+            }
+      }}>
           <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                   <DialogTitle>{currentSource?.id ? 'Edit' : 'Add'} Knowledge Source</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                  <div>
-                      <Label htmlFor="ks-title">Title</Label>
-                      <Input 
-                        id="ks-title" 
-                        placeholder="e.g., Return Policy" 
-                        value={currentSource?.title || ''}
-                        onChange={(e) => setCurrentSource(prev => ({ ...prev, title: e.target.value }))}
-                      />
-                  </div>
-                  <div>
-                      <Label htmlFor="ks-content">Content</Label>
-                       <MarkdownEditor
-                            value={currentSource?.content || ''}
-                            onValueChange={(value) => setCurrentSource(prev => ({ ...prev, content: value }))}
-                            placeholder="Enter all information related to this topic. You can use Markdown for formatting."
-                        />
-                  </div>
-              </div>
-              <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="ghost">Cancel</Button>
-                  </DialogClose>
-                  <Button onClick={handleSaveKnowledgeSource} disabled={isSaving}>
-                      <Save className="mr-2 h-4 w-4"/>
-                      {isSaving ? 'Saving...' : 'Save'}
-                  </Button>
-              </DialogFooter>
+               <Tabs value={dialogActiveTab} onValueChange={setDialogActiveTab} className="w-full pt-4">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="manual"><Pencil className="mr-2 h-4 w-4" /> Manual</TabsTrigger>
+                        <TabsTrigger value="from-url"><Link2 className="mr-2 h-4 w-4" /> From URL</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="manual" className="pt-4 space-y-4">
+                        <div>
+                            <Label htmlFor="ks-title">Title</Label>
+                            <Input 
+                                id="ks-title" 
+                                placeholder="e.g., Return Policy" 
+                                value={currentSource?.title || ''}
+                                onChange={(e) => setCurrentSource(prev => ({ ...prev, title: e.target.value }))}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="ks-content">Content (Markdown supported)</Label>
+                            <MarkdownEditor
+                                    value={currentSource?.content || ''}
+                                    onValueChange={(value) => setCurrentSource(prev => ({ ...prev, content: value }))}
+                                    placeholder="Enter all information related to this topic."
+                                />
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="ghost">Cancel</Button>
+                            </DialogClose>
+                            <Button onClick={handleSaveKnowledgeSource} disabled={isSaving}>
+                                <Save className="mr-2 h-4 w-4"/>
+                                {isSaving ? 'Saving...' : 'Save Source'}
+                            </Button>
+                        </DialogFooter>
+                    </TabsContent>
+                    <TabsContent value="from-url" className="pt-4 space-y-4">
+                         <div className="space-y-2">
+                            <Label htmlFor="ingest-url">Webpage URL</Label>
+                            <div className="flex items-center gap-2">
+                               <Input 
+                                    id="ingest-url" 
+                                    placeholder="https://example.com/about-us" 
+                                    value={ingestionUrl}
+                                    onChange={(e) => setIngestionUrl(e.target.value)}
+                                />
+                                <Button onClick={handleIngestUrl} disabled={isIngesting || !ingestionUrl}>
+                                    {isIngesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+                                    {isIngesting ? 'Generating...' : 'Generate Content'}
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">The AI will read the page and generate a title and content summary for you.</p>
+                        </div>
+
+                        {ingestionError && (
+                            <Alert variant={ingestionError.isBlocked ? "destructive" : "default"}>
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>{ingestionError.isBlocked ? "Webpage Blocked" : "Ingestion Failed"}</AlertTitle>
+                                <AlertDescription>
+                                    {ingestionError.message}
+                                    {ingestionError.isBlocked && 
+                                    <p className="mt-2 text-xs">
+                                        For websites with strong anti-bot protection, using a specialized third-party scraping API (e.g., Browserless, ScraperAPI) is recommended.
+                                    </p>
+                                    }
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        
+                        <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>How it works</AlertTitle>
+                            <AlertDescription>
+                                After generation, you will be taken to the "Manual" tab to review and save the new knowledge source.
+                            </AlertDescription>
+                        </Alert>
+                    </TabsContent>
+                </Tabs>
           </DialogContent>
       </Dialog>
     </Card>

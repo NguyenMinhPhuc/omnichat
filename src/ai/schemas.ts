@@ -33,3 +33,17 @@ export const LeadCaptureOutputSchema = z.object({
     isComplete: z.boolean().describe('Set to true only when all information (name, needs, phone number) has been collected.'),
 });
 export type LeadCaptureOutput = z.infer<typeof LeadCaptureOutputSchema>;
+
+// Schema for Webpage Ingestion
+export const WebpageIngestionInputSchema = z.object({
+  url: z.string().url().describe('The URL of the webpage to ingest.'),
+  userId: z.string().describe('The ID of the user performing the ingestion.'),
+  apiKey: z.string().optional().describe('The API key to use for the Gemini model.'),
+});
+export type WebpageIngestionInput = z.infer<typeof WebpageIngestionInputSchema>;
+
+export const WebpageIngestionOutputSchema = z.object({
+  title: z.string().describe('A suitable title for the knowledge source, derived from the webpage content.'),
+  content: z.string().describe('A concise summary of the key information from the webpage, formatted in Markdown.'),
+});
+export type WebpageIngestionOutput = z.infer<typeof WebpageIngestionOutputSchema>;
