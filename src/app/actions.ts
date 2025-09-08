@@ -5,27 +5,10 @@ import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
 import { ingestWebpage } from '@/ai/flows/webpage-ingestion-flow';
 import type { WebpageIngestionInput, WebpageIngestionOutput } from '@/ai/schemas';
-import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getFirestore, Firestore, FieldValue, DocumentReference } from 'firebase-admin/firestore';
+import { getAdminDb } from '@/lib/firebase-admin';
+import type { DocumentReference, FieldValue } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
 import type { KnowledgeSource } from '@/components/Dashboard';
-
-let db: Firestore;
-let adminApp: App;
-
-// This is the recommended way to initialize Firebase Admin SDK in a serverless environment
-// It ensures the app is initialized only once.
-function getDb(): Firestore {
-  if (getApps().length === 0) {
-    // When GOOGLE_APPLICATION_CREDENTIALS is set, initializeApp() will use it automatically.
-    adminApp = initializeApp();
-  } else {
-    adminApp = getApps()[0];
-  }
-  db = getFirestore(adminApp);
-  return db;
-}
-
 
 /**
  * Fetches an AI response using a specified Genkit flow.
@@ -42,7 +25,7 @@ export async function getAIResponse({
   chatHistory?: string;
 }): Promise<any> {
   try {
-    const firestore = getDb();
+    const firestore = getAdminDb();
     let knowledgeBaseParts: string[] = [];
     let userApiKey: string | undefined = undefined;
 
@@ -124,7 +107,7 @@ export async function updateScenario(userId: string, scenario: ScenarioItem[]): 
     }
 
     try {
-        const firestore = getDb();
+        const firestore = getAdminDb();
         const userDocRef = firestore.collection('users').doc(userId);
         await userDocRef.update({ scenario });
         return { success: true, message: "Scenario updated successfully." };
@@ -145,10 +128,13 @@ export async function addKnowledgeSource(userId: string, source: Omit<KnowledgeS
     }
 
     try {
-        const firestore = getDb();
+        const firestore = getAdminDb();
         const userDocRef = firestore.collection('users').doc(userId);
         const newId = firestore.collection('users').doc().id; 
         const newSource: KnowledgeSource = { ...source, id: newId };
+        
+        // We need to use FieldValue from the admin SDK
+        const { FieldValue } = await import('firebase-admin/firestore');
 
         await userDocRef.update({
             knowledgeSources: FieldValue.arrayUnion(newSource)
@@ -171,7 +157,7 @@ export async function updateKnowledgeSource(userId: string, updatedSource: Knowl
     }
 
     try {
-        const firestore = getDb();
+        const firestore = getAdminDb();
         const userDocRef = firestore.collection('users').doc(userId);
         const userDoc = await userDocRef.get();
 
@@ -209,7 +195,7 @@ export async function deleteKnowledgeSource(userId: string, sourceId: string): P
     }
 
     try {
-        const firestore = getDb();
+        const firestore = getAdminDb();
         const userDocRef = firestore.collection('users').doc(userId);
         const userDoc = await userDocRef.get();
         
@@ -233,7 +219,7 @@ export async function deleteKnowledgeSource(userId: string, sourceId: string): P
 
 export async function getUsersWithUsageData() {
   try {
-    const firestore = getDb();
+    const firestore = getAdminDb();
     const now = new Date();
     const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
 
@@ -282,7 +268,7 @@ export async function getLeads(userId: string) {
         throw new Error("User ID is required.");
     }
     try {
-        const firestore = getDb();
+        const firestore = getAdminDb();
         const leadsQuery = firestore.collection('leads')
                                 .where('chatbotId', '==', userId);
         const snapshot = await leadsQuery.get();
@@ -317,7 +303,7 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
     }
 
     try {
-        const firestore = getDb();
+        const firestore = getAdminDb();
         const leadDocRef: DocumentReference = firestore.collection('leads').doc(leadId);
         await leadDocRef.update({ status });
         return { success: true, message: "Lead status updated successfully." };
@@ -335,8 +321,7 @@ export async function ingestWebpageAction(
   input: WebpageIngestionInput
 ): Promise<{ success: boolean; data?: WebpageIngestionOutput; message?: string }> {
   try {
-    // The `ingestWebpage` flow now handles API key retrieval internally,
-    // so we just need to call it. `getDb()` is called implicitly inside the flow.
+    // The `ingestWebpage` flow now handles API key retrieval and db initialization internally.
     const result = await ingestWebpage(input);
     return { success: true, data: result };
   } catch (error) {

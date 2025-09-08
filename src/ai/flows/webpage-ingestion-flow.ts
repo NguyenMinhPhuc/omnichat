@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to ingest a webpage URL, extract its content,
@@ -15,22 +16,12 @@ import {
   WebpageIngestionOutput,
   WebpageIngestionOutputSchema
 } from '@/ai/schemas';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getApps, initializeApp } from 'firebase-admin/app';
+import { getAdminDb } from '@/lib/firebase-admin';
 
 // This is an internal schema, not exported.
 const WebpageIngestionPromptInputSchema = z.object({
   textContent: z.string(),
 });
-
-// A helper function to safely get the Firebase Admin instance
-function getAdminDb() {
-  if (getApps().length === 0) {
-    // This relies on GOOGLE_APPLICATION_CREDENTIALS being set
-    initializeApp();
-  }
-  return getFirestore();
-}
 
 const webpageIngestionPrompt = ai.definePrompt({
   name: 'webpageIngestionPrompt',
