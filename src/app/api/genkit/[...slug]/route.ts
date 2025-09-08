@@ -4,6 +4,7 @@ import { ai } from '@/ai/genkit';
 
 // Import flows to make them available
 import '@/ai/flows/intelligent-ai-responses';
+import '@/ai/flows/webpage-ingestion-flow';
 
 export async function POST(request: NextRequest) {
     try {

@@ -3,31 +3,26 @@
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
+import { ingestWebpage, WebpageIngestionInput, WebpageIngestionOutput } from '@/ai/flows/webpage-ingestion-flow';
+import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
+import { getFirestore, Firestore, FieldValue, DocumentReference } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
 import type { KnowledgeSource } from '@/components/Dashboard';
 
 let db: Firestore;
 let adminApp: App;
 
-/**
- * Initializes Firebase Admin SDK and returns a Firestore instance.
- * It automatically uses GOOGLE_APPLICATION_CREDENTIALS environment variable.
- */
+// This is the recommended way to initialize Firebase Admin SDK in a serverless environment
+// It ensures the app is initialized only once.
 function getDb(): Firestore {
-    if (getApps().length === 0) {
-        // When no arguments are provided, initializeApp() automatically looks for
-        // the GOOGLE_APPLICATION_CREDENTIALS environment variable.
-        adminApp = initializeApp();
-    } else {
-        // Get the already initialized app
-        adminApp = getApps()[0]!;
-    }
-    
-    // Get the Firestore instance from the initialized app
-    db = getFirestore(adminApp);
-    return db;
+  if (getApps().length === 0) {
+    // When GOOGLE_APPLICATION_CREDENTIALS is set, initializeApp() will use it automatically.
+    adminApp = initializeApp();
+  } else {
+    adminApp = getApps()[0];
+  }
+  db = getFirestore(adminApp);
+  return db;
 }
 
 
@@ -322,7 +317,7 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
 
     try {
         const firestore = getDb();
-        const leadDocRef = firestore.collection('leads').doc(leadId);
+        const leadDocRef: DocumentReference = firestore.collection('leads').doc(leadId);
         await leadDocRef.update({ status });
         return { success: true, message: "Lead status updated successfully." };
     } catch (error) {
@@ -332,4 +327,33 @@ export async function updateLeadStatus(leadId: string, status: 'waiting' | 'cons
     }
 }
 
-    
+/**
+ * Ingests a webpage URL and returns a title and content summary.
+ */
+export async function ingestWebpageAction(
+  input: WebpageIngestionInput
+): Promise<{ success: boolean; data?: WebpageIngestionOutput; message?: string }> {
+  try {
+    const firestore = getDb(); // Ensure admin is initialized
+    const userDocRef = firestore.collection('users').doc(input.userId);
+    const userDoc = await userDocRef.get();
+
+    if (!userDoc.exists) {
+      return { success: false, message: 'User not found.' };
+    }
+
+    const userData = userDoc.data();
+    const apiKey = userData?.geminiApiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return { success: false, message: 'API key is not configured for this user.' };
+    }
+
+    const result = await ingestWebpage({ url: input.url, apiKey });
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error in ingestWebpageAction:', error);
+    const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return { success: false, message };
+  }
+}
