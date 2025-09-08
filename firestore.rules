@@ -1,29 +1,29 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow anyone to read user profiles for chatbot config
-    // Allow authenticated users to update their own profile
+    // Allow ANYONE to read user data (for public chatbot settings)
+    // but only the authenticated user can write to their own document.
     match /users/{userId} {
       allow read: if true;
-      allow update: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth.uid == userId;
     }
 
-    // Allow authenticated users to create and manage their own chat sessions
-    match /chats/{chatId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Allow anyone to create leads
-    // Allow authenticated users (chatbot owners) to update the lead status
+    // Allow logged-in users to create/update leads.
+    // Reading/deleting leads is restricted to the chatbot owner or an admin.
     match /leads/{leadId} {
-      allow create: if true;
-      allow update: if request.auth != null;
+       allow create, update: if request.auth != null;
+       allow read, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' 
+                          || get(/databases/$(database)/documents/leads/$(leadId)).data.chatbotId == request.auth.uid;
     }
 
+    // Allow anyone to create chat sessions.
+    // Reading/updating/deleting is restricted to the chatbot owner or an admin.
+     match /chats/{chatId} {
+        allow create: if true; 
+        allow read, update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' 
+                                    || get(/databases/$(database)/documents/chats/$(chatId)).data.chatbotId == request.auth.uid;
+    }
   }
 }
-
-    
