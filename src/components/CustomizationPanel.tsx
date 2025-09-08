@@ -413,5 +413,3 @@ export default function CustomizationPanel({
     </Card>
   );
 }
-
-    
