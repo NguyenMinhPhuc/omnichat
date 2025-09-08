@@ -3,7 +3,8 @@
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
 import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
-import { ingestWebpage, WebpageIngestionInput, WebpageIngestionOutput } from '@/ai/flows/webpage-ingestion-flow';
+import { ingestWebpage } from '@/ai/flows/webpage-ingestion-flow';
+import type { WebpageIngestionInput, WebpageIngestionOutput } from '@/ai/schemas';
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldValue, DocumentReference } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
@@ -334,22 +335,9 @@ export async function ingestWebpageAction(
   input: WebpageIngestionInput
 ): Promise<{ success: boolean; data?: WebpageIngestionOutput; message?: string }> {
   try {
-    const firestore = getDb(); // Ensure admin is initialized
-    const userDocRef = firestore.collection('users').doc(input.userId);
-    const userDoc = await userDocRef.get();
-
-    if (!userDoc.exists) {
-      return { success: false, message: 'User not found.' };
-    }
-
-    const userData = userDoc.data();
-    const apiKey = userData?.geminiApiKey || process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      return { success: false, message: 'API key is not configured for this user.' };
-    }
-
-    const result = await ingestWebpage({ url: input.url, apiKey });
+    // The `ingestWebpage` flow now handles API key retrieval internally,
+    // so we just need to call it. `getDb()` is called implicitly inside the flow.
+    const result = await ingestWebpage(input);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error in ingestWebpageAction:', error);
