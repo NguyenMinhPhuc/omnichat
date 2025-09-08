@@ -2,7 +2,7 @@
 'use server';
 
 import { intelligentAIResponseFlow } from '@/ai/flows/intelligent-ai-responses';
-import { IntelligentAIResponseOutput } from '@/ai/schemas';
+import { leadCaptureFlow } from '@/ai/flows/lead-qualification-flow';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
 import type { ScenarioItem } from '@/components/ScenarioEditor';
@@ -13,37 +13,38 @@ let adminApp: App;
 
 /**
  * Initializes Firebase Admin SDK and returns a Firestore instance.
- * Ensures that initialization only happens once, handling Next.js HMR correctly.
+ * It automatically uses GOOGLE_APPLICATION_CREDENTIALS environment variable.
  */
-function getDb() {
-    if (!getApps().length) {
-        try {
-            // This requires the serviceAccount.json file to be present
-            adminApp = initializeApp();
-        } catch (error) {
-            console.error("Failed to initialize Firebase Admin with default credentials.", error);
-            // This will likely fail if credentials aren't set up, but it's the standard way
-        }
+function getDb(): Firestore {
+    if (getApps().length === 0) {
+        // When no arguments are provided, initializeApp() automatically looks for
+        // the GOOGLE_APPLICATION_CREDENTIALS environment variable.
+        adminApp = initializeApp();
     } else {
+        // Get the already initialized app
         adminApp = getApps()[0]!;
     }
     
+    // Get the Firestore instance from the initialized app
     db = getFirestore(adminApp);
     return db;
 }
 
 
 /**
- * Fetches an AI response using the Genkit flow.
- * If a knowledge base or scenario exists for the user, it's retrieved and passed to the AI.
+ * Fetches an AI response using a specified Genkit flow.
  */
 export async function getAIResponse({
   query,
   userId,
+  flowName = 'intelligentAIResponseFlow',
+  chatHistory = '',
 }: {
   query: string;
   userId: string;
-}): Promise<IntelligentAIResponseOutput> {
+  flowName?: string;
+  chatHistory?: string;
+}): Promise<any> {
   try {
     const firestore = getDb();
     let knowledgeBaseParts: string[] = [];
@@ -87,47 +88,19 @@ export async function getAIResponse({
 
     const combinedKnowledgeBase = knowledgeBaseParts.join('\n\n---\n\n');
 
-    const result = await intelligentAIResponseFlow({
-      query,
-      userId,
-      knowledgeBase: combinedKnowledgeBase,
-      apiKey: userApiKey,
-    });
-
-    // Restore the logic to update monthly usage statistics
-    if (result.totalTokens !== undefined && result.chatRequestCount !== undefined && firestore) {
-      const now = new Date();
-      const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-      const usageDocId = `${userId}_${monthYear}`; // Create a composite ID
-
-      const monthlyUsageRef = firestore.collection('monthlyUsage').doc(usageDocId);
-
-      try {
-        await firestore.runTransaction(async (transaction) => {
-            const doc = await transaction.get(monthlyUsageRef);
-            if (!doc.exists) {
-                transaction.set(monthlyUsageRef, {
-                    userId: userId, // Store the userId for querying
-                    monthYear: monthYear,
-                    totalTokens: result.totalTokens,
-                    inputTokens: result.inputTokens || 0,
-                    outputTokens: result.outputTokens || 0,
-                    chatRequests: result.chatRequestCount,
-                    lastUpdated: FieldValue.serverTimestamp(),
-                });
-            } else {
-                transaction.update(monthlyUsageRef, {
-                    totalTokens: FieldValue.increment(result.totalTokens!),
-                    inputTokens: FieldValue.increment(result.inputTokens || 0),
-                    outputTokens: FieldValue.increment(result.outputTokens || 0),
-                    chatRequests: FieldValue.increment(result.chatRequestCount!),
-                    lastUpdated: FieldValue.serverTimestamp(),
-                });
-            }
-        });
-      } catch (usageError) {
-        console.error('Error updating monthly usage for user', userId, usageError);
-      }
+    let result: any;
+    if (flowName === 'leadCaptureFlow') {
+      result = await leadCaptureFlow({
+        chatHistory,
+        apiKey: userApiKey,
+      });
+    } else {
+      result = await intelligentAIResponseFlow({
+        query,
+        userId,
+        knowledgeBase: combinedKnowledgeBase,
+        apiKey: userApiKey,
+      });
     }
 
     return result;
@@ -135,13 +108,13 @@ export async function getAIResponse({
     console.error('Error getting AI response:', error);
     if (error instanceof Error && error.message.includes('429 Too Many Requests')) {
       return {
-        response: "Xin lỗi, hiện tại tôi đang hơi quá tải một chút. Bạn vui lòng thử lại sau vài phút nhé.",
+        response: "Sorry, I'm a bit overloaded at the moment. Please try again in a few minutes.",
       };
     }
     const errorMessage =
       error instanceof Error ? error.message : 'An unexpected error occurred.';
     return {
-      response: `Sorry, I encountered an error: ${errorMessage}`,
+      response: `Authentication Error: Could not connect to the AI server. Please check your Gemini API Key (in your Profile page) or the system's key (if you did not provide a custom one). Ensure the API Key is valid, the Google Cloud project has billing enabled, and the Generative Language API is activated.`,
     };
   }
 }
@@ -304,3 +277,59 @@ export async function getUsersWithUsageData() {
     throw new Error("Failed to fetch users and their usage data.");
   }
 }
+
+/**
+ * Fetches leads for a specific chatbot owner.
+ */
+export async function getLeads(userId: string) {
+    if (!userId) {
+        throw new Error("User ID is required.");
+    }
+    try {
+        const firestore = getDb();
+        const leadsQuery = firestore.collection('leads')
+                                .where('chatbotId', '==', userId);
+        const snapshot = await leadsQuery.get();
+        if (snapshot.empty) {
+            return [];
+        }
+        const leads = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const createdAt = data.createdAt;
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: createdAt && typeof createdAt.toDate === 'function' 
+                    ? createdAt.toDate().toISOString() 
+                    : new Date().toISOString(), 
+            };
+        });
+        return leads;
+    } catch (error) {
+        console.error("Error fetching leads:", error);
+        throw new Error("Failed to fetch leads.");
+    }
+}
+
+
+/**
+ * Updates the status of a specific lead.
+ */
+export async function updateLeadStatus(leadId: string, status: 'waiting' | 'consulted'): Promise<{ success: boolean, message: string }> {
+    if (!leadId) {
+        return { success: false, message: "Lead ID is required." };
+    }
+
+    try {
+        const firestore = getDb();
+        const leadDocRef = firestore.collection('leads').doc(leadId);
+        await leadDocRef.update({ status });
+        return { success: true, message: "Lead status updated successfully." };
+    } catch (error) {
+        console.error("Error updating lead status:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+        return { success: false, message: `Failed to update lead status: ${errorMessage}` };
+    }
+}
+
+    

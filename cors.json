@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["http://172.16.29.251:9002","http://localhost:9002","*"]
+,    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]

@@ -1,7 +1,7 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import { googleAI, gemini15Flash, gemini15Pro } from '@genkit-ai/googleai';
+import { googleAI, gemini15Flash } from '@genkit-ai/googleai';
 import {
   IntelligentAIResponseInput,
   IntelligentAIResponseOutput,

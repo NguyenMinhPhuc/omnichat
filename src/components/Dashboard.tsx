@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, LogOut, Settings, User, ShieldCheck, Code } from 'lucide-react';
+import { Bot, LogOut, Settings, User, ShieldCheck, Code, Users2 } from 'lucide-react';
 import CustomizationPanel from './CustomizationPanel';
 import ChatbotPreview from './ChatbotPreview';
 import { getAIResponse } from '@/app/actions';
@@ -42,6 +42,10 @@ export interface CustomizationState {
   backgroundColor: string;
   accentColor: string;
   logoUrl: string | null;
+  chatbotName: string;
+  aiPersona: string;
+  greetingMessage: string;
+  chatbotIconUrl: string | null;
 }
 
 export interface ScenarioItem {
@@ -66,6 +70,10 @@ export default function Dashboard() {
     backgroundColor: '#FFFFFF',
     accentColor: '#FAB91E',
     logoUrl: null,
+    chatbotName: 'OmniChat Assistant',
+    aiPersona: 'You are a helpful and friendly AI assistant.',
+    greetingMessage: "Hello! I'm your AI assistant. How can I help you?",
+    chatbotIconUrl: null,
   });
 
   const [scenario, setScenario] = useState<ScenarioItem[]>([]);
@@ -73,12 +81,7 @@ export default function Dashboard() {
   
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      sender: 'ai',
-      text: "Hello! I'm your AI assistant. How can I help you?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [userRole, setUserRole] = useState<'user' | 'admin' | null>(null);
 
@@ -97,7 +100,8 @@ export default function Dashboard() {
         if (userDoc.exists()) {
           const data = userDoc.data();
           if (data.customization) {
-            setCustomization(data.customization);
+            setCustomization({ ...customization, ...data.customization});
+            setMessages([{ sender: 'ai', text: data.customization.greetingMessage || customization.greetingMessage }]);
           }
           if (data.scenario) {
             setScenario(data.scenario);
@@ -153,6 +157,14 @@ export default function Dashboard() {
                 <Link href="/dashboard">
                   <Settings />
                   Configuration
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/leads">
+                  <Users2 />
+                  Leads
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

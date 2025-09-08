@@ -3,8 +3,8 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
-// Correctly configured Firebase config using environment variables
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -14,10 +14,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Simple check if all required config values are present.
+const isConfigValid = Object.values(firebaseConfig).every(value => !!value);
+
+if (!isConfigValid) {
+    const errorMessage = `Missing one or more Firebase environment variables (starting with NEXT_PUBLIC_). Please check your .env.local file and restart the server.`;
+    console.error(errorMessage);
+    // You might want to throw an error in development to halt execution
+    if (process.env.NODE_ENV === 'development') {
+        throw new Error(errorMessage);
+    }
+}
 
 // Initialize Firebase
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
+const storage: FirebaseStorage = getStorage(app);
 
-export { app, auth, db };
+export { app, auth, db, storage };

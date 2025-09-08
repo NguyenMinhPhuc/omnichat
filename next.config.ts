@@ -4,6 +4,24 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     // Other experimental features can go here.
+      // Thêm domain/IP mà Anh dùng để dev
+    allowedDevOrigins: [
+      "http://localhost:3000",
+      "http://172.16.29.251:9002"
+    ],
+  },
+  // Make server-side and public environment variables available to Next.js
+  env: {
+    // Server-side
+    GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    // Public (client-side)
+    NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   },
   async headers() {
     return [
@@ -30,3 +48,5 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
+    

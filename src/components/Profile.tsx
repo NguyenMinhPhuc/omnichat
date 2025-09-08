@@ -25,7 +25,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code, KeyRound } from 'lucide-react';
+import { Bot, LogOut, Settings, User, Users, ShieldCheck, Camera, Save, Info, Code, KeyRound, Users2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +37,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import MarkdownEditor from './MarkdownEditor';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { uploadFile } from '@/lib/storage';
 
 
 export default function Profile() {
@@ -110,14 +111,18 @@ export default function Profile() {
     }
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && user) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const path = `users/${user.uid}/avatars/avatar.jpg`; // Overwrite avatar for simplicity
+      try {
+        const downloadURL = await uploadFile(file, path);
+        setAvatarUrl(downloadURL);
+        toast({ title: "Avatar Updated", description: "Your new avatar is ready. Don't forget to save changes." });
+      } catch (error) {
+        toast({ title: "Upload Failed", description: "Could not upload your new avatar.", variant: "destructive" });
+        console.error("Avatar upload failed:", error);
+      }
     }
   };
 
@@ -167,6 +172,14 @@ export default function Profile() {
                 <Link href="/dashboard">
                   <Settings />
                   Configuration
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/leads">
+                  <Users2 />
+                  Leads
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

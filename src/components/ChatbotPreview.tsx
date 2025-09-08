@@ -95,7 +95,7 @@ export default function ChatbotPreview({
         <div className="flex items-center space-x-3">
           <Logo logoUrl={customization.logoUrl} />
           <div className="flex flex-col">
-            <h2 className="font-bold text-lg font-headline">OmniChat Assistant</h2>
+            <h2 className="font-bold text-lg font-headline">{customization.chatbotName}</h2>
             <p className="text-xs text-primary-foreground/80">Online</p>
           </div>
         </div>
@@ -107,6 +107,7 @@ export default function ChatbotPreview({
               <div key={index} className={cn('flex items-end gap-2', message.sender === 'user' ? 'justify-end' : 'justify-start')}>
                 {message.sender === 'ai' && (
                   <Avatar className="h-8 w-8">
+                    <AvatarImage src={customization.chatbotIconUrl || ''} alt="Chatbot" />
                     <AvatarFallback style={{backgroundColor: customization.accentColor}}>
                         <Bot className="text-white" />
                     </AvatarFallback>
@@ -134,6 +135,7 @@ export default function ChatbotPreview({
              {isAiTyping && (
                 <div className="flex items-end gap-2 justify-start">
                     <Avatar className="h-8 w-8">
+                        <AvatarImage src={customization.chatbotIconUrl || ''} alt="Chatbot" />
                         <AvatarFallback style={{backgroundColor: customization.accentColor}}>
                             <Bot className="text-white" />
                         </AvatarFallback>
