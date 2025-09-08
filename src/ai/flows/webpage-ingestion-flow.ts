@@ -52,8 +52,12 @@ const webpageIngestionFlow = ai.defineFlow(
     outputSchema: WebpageIngestionOutputSchema,
   },
   async ({ url, apiKey }) => {
-    // Step 1: Fetch the webpage content
-    const response = await fetch(url);
+    // Step 1: Fetch the webpage content with a browser-like User-Agent
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch URL: ${response.statusText}`);
     }
