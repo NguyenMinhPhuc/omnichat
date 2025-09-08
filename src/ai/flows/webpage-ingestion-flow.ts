@@ -31,6 +31,8 @@ const webpageIngestionPrompt = ai.definePrompt({
   prompt: `
     You are an expert content analyst. Your task is to process the text content of a webpage and generate a clear, concise knowledge source from it.
 
+    **Important:** The generated title and summary MUST be in the same language as the original webpage content. Do not translate the content.
+
     Analyze the following webpage content:
     <webpage_content>
     {{{textContent}}}
