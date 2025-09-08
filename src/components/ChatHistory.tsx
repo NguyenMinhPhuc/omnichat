@@ -3,15 +3,22 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, DocumentData, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, DocumentData, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Bot, User } from 'lucide-react';
+import { MessageSquare, Bot, User, Calendar as CalendarIcon, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { format } from 'date-fns';
+import { addDays, format } from 'date-fns';
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { DateRange } from "react-day-picker"
 
 interface ChatHistoryProps {
   chatbotId: string;
@@ -21,16 +28,37 @@ interface ChatSession extends DocumentData {
   id: string;
   createdAt: any;
   messages: { sender: 'user' | 'ai'; text: string }[];
+  isRead?: boolean;
 }
 
 export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -7),
+    to: new Date(),
+  });
 
   useEffect(() => {
     const fetchChatHistory = async () => {
       setLoading(true);
-      const q = query(collection(db, 'chats'), where('chatbotId', '==', chatbotId), orderBy('createdAt', 'desc'));
+      let q = query(
+        collection(db, 'chats'), 
+        where('chatbotId', '==', chatbotId), 
+        orderBy('createdAt', 'desc')
+      );
+
+      // Add date filtering if a date range is selected
+      if (date?.from) {
+        q = query(q, where('createdAt', '>=', date.from));
+      }
+      if (date?.to) {
+        // To make the 'to' date inclusive, we set the time to the end of the day.
+        const toDate = new Date(date.to);
+        toDate.setHours(23, 59, 59, 999);
+        q = query(q, where('createdAt', '<=', toDate));
+      }
+
       const querySnapshot = await getDocs(q);
       const sessions = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -43,27 +71,90 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
     if (chatbotId) {
       fetchChatHistory();
     }
-  }, [chatbotId]);
+  }, [chatbotId, date]);
+
+  const handleMarkAsRead = async (sessionId: string) => {
+    const sessionRef = doc(db, 'chats', sessionId);
+    await updateDoc(sessionRef, {
+        isRead: true
+    });
+    // Update local state to reflect the change immediately
+    setChatSessions(prevSessions => 
+        prevSessions.map(session => 
+            session.id === sessionId ? { ...session, isRead: true } : session
+        )
+    );
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline flex items-center gap-2"><MessageSquare /> Chat History</CardTitle>
-        <CardDescription>Review past conversations with your chatbot.</CardDescription>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <CardTitle className="font-headline flex items-center gap-2"><MessageSquare /> Chat History</CardTitle>
+                <CardDescription>Review past conversations with your chatbot.</CardDescription>
+            </div>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        id="date"
+                        variant={"outline"}
+                        className={cn(
+                        "w-[300px] justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date?.from ? (
+                        date.to ? (
+                            <>
+                            {format(date.from, "LLL dd, y")} -{" "}
+                            {format(date.to, "LLL dd, y")}
+                            </>
+                        ) : (
+                            format(date.from, "LLL dd, y")
+                        )
+                        ) : (
+                        <span>Pick a date</span>
+                        )}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={date?.from}
+                        selected={date}
+                        onSelect={setDate}
+                        numberOfMonths={2}
+                    />
+                </PopoverContent>
+            </Popover>
+        </div>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-96">
           {loading ? (
             <p>Loading chat history...</p>
           ) : chatSessions.length === 0 ? (
-            <p className="text-muted-foreground">No chat history found.</p>
+            <p className="text-muted-foreground text-center py-4">No chat history found for the selected period.</p>
           ) : (
             <div className="space-y-2">
               {chatSessions.map(session => (
-                <Dialog key={session.id}>
+                <Dialog key={session.id} onOpenChange={(open) => {
+                    if (open && !session.isRead) {
+                        handleMarkAsRead(session.id);
+                    }
+                }}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      Chat from {format(session.createdAt.toDate(), 'PPP p')}
+                    <Button variant="outline" className="w-full justify-between h-auto py-2">
+                        <div className="flex items-center gap-2 text-left">
+                           {!session.isRead && <span className="h-2 w-2 rounded-full bg-primary" title="Unread"></span>}
+                           <div className={cn(!session.isRead && "font-bold")}>
+                             Chat from {format(session.createdAt.toDate(), 'PPP p')}
+                           </div>
+                        </div>
+                        {session.isRead && <Check className="h-4 w-4 text-green-500" title="Read" />}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
