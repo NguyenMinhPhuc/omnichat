@@ -7,7 +7,6 @@ import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import { getAIResponse } from '@/app/actions';
@@ -326,8 +325,8 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                 Get Consultation
             </Button>
           </CardHeader>
-          <CardContent className="flex-1 p-0 bg-[--chat-bg-color]">
-            <ScrollArea className="h-full" ref={scrollAreaRef}>
+          <CardContent className="flex-1 p-0 bg-[--chat-bg-color] overflow-hidden">
+            <div className="h-full overflow-y-auto" ref={scrollAreaRef}>
               <div className="p-4 space-y-4">
                 {messages.map((message, index) => (
                   <div key={index} className={cn('flex items-end gap-2', message.sender === 'user' ? 'justify-end' : 'justify-start')}>
@@ -396,7 +395,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                     ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </CardContent>
           <CardFooter className="p-4 border-t bg-background">
             <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">

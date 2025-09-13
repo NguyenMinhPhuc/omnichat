@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { CustomizationState, ScenarioItem, KnowledgeSource } from './Dashboard';
 import { useAuth } from '@/context/AuthContext';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import ChatHistory from './ChatHistory';
 import ScenarioEditor from './ScenarioEditor';
@@ -77,12 +77,12 @@ export default function CustomizationPanel({
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setCustomization({ ...customization, [name]: value });
+    setCustomization(prev => ({ ...prev, [name]: value }));
   };
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setCustomization({ ...customization, [name]: value });
+    setCustomization(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'chatbotIconUrl') => {
@@ -109,9 +109,8 @@ export default function CustomizationPanel({
     setIsSaving(true);
     try {
         const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, {
-            'customization': customization
-        });
+        // Use setDoc with merge:true to perform a deep merge of the customization object
+        await setDoc(userDocRef, { customization: customization }, { merge: true });
         toast({ title: "Success", description: "Customization settings saved." });
     } catch (e) {
         const error = e as Error;
