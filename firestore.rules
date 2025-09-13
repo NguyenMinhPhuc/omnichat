@@ -1,8 +1,10 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
+<<<<<<< HEAD
     // Users can read and write their own document.
     // Admins can read and update any user document.
     match /users/{userId} {
@@ -29,6 +31,22 @@ service cloud.firestore {
     match /monthlyUsage/{usageId} {
         allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
         allow write: if false; // Should be written by a backend process/function only
+=======
+    // Allow public read access to user profiles for chatbot configuration
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow authenticated users to create and update their own chat sessions
+    match /chats/{chatId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow admin users to manage monthly usage data
+    match /monthlyUsage/{usageId} {
+        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+>>>>>>> c7316d5 (FirebaseError: Missing or insufficient permissions.)
     }
   }
 }
