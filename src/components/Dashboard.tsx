@@ -100,7 +100,7 @@ export default function Dashboard() {
         if (userDoc.exists()) {
           const data = userDoc.data();
           if (data.customization) {
-            setCustomization({ ...customization, ...data.customization});
+            setCustomization(prev => ({ ...prev, ...data.customization }));
             setMessages([{ sender: 'ai', text: data.customization.greetingMessage || customization.greetingMessage }]);
           }
           if (data.scenario) {
