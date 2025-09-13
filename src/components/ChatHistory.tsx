@@ -154,7 +154,7 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
                              Chat from {format(session.createdAt.toDate(), 'PPP p')}
                            </div>
                         </div>
-                        {session.isRead && <Check className="h-4 w-4 text-green-500" title="Read" />}
+                        {session.isRead && <Check className="h-4 w-4 text-green-500" />}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
