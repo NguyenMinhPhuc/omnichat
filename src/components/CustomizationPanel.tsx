@@ -203,6 +203,24 @@ export default function CustomizationPanel({
     }
   };
 
+  const handleDialogTabChange = async (tab: string) => {
+    setDialogActiveTab(tab);
+    if (tab === 'from-url') {
+      if (navigator.clipboard?.readText) {
+        try {
+          const text = await navigator.clipboard.readText();
+          // Basic URL validation
+          if (text.startsWith('http://') || text.startsWith('https://')) {
+            setIngestionUrl(text);
+            toast({ title: 'Pasted from clipboard', description: 'URL has been pasted automatically.' });
+          }
+        } catch (err) {
+          console.warn('Could not read from clipboard:', err);
+        }
+      }
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -362,7 +380,7 @@ export default function CustomizationPanel({
               <DialogHeader>
                   <DialogTitle>{currentSource?.id ? 'Edit' : 'Add'} Knowledge Source</DialogTitle>
               </DialogHeader>
-               <Tabs value={dialogActiveTab} onValueChange={setDialogActiveTab} className="w-full pt-4">
+               <Tabs value={dialogActiveTab} onValueChange={handleDialogTabChange} className="w-full pt-4">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="manual"><Pencil className="mr-2 h-4 w-4" /> Manual</TabsTrigger>
                         <TabsTrigger value="from-url"><Link2 className="mr-2 h-4 w-4" /> From URL</TabsTrigger>
