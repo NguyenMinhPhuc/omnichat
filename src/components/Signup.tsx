@@ -1,68 +1,61 @@
+"use client";
 
-'use client';
-
-import { useState } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
-import { Bot } from 'lucide-react';
+import { useState } from "react";
+import { postJSON } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { Bot } from "lucide-react";
+import bcrypt from "bcryptjs";
 
 export default function Signup() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const passwordHash = await bcrypt.hash(password, 12);
 
-      // Create user document in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        displayName: displayName,
-        phoneNumber: phoneNumber,
-        role: 'user', // Default role
-        status: 'pending', // Default status is now pending
-        avatarUrl: null,
-        geminiApiKey: '', // Initialize empty geminiApiKey
-        canManageApiKey: false, // Default permission to false
-        customization: {
-          primaryColor: '#29ABE2',
-          backgroundColor: '#F0F8FF',
-          accentColor: '#6495ED',
-          logoUrl: null,
-        },
-        scenario: [],
-        knowledgeSources: [],
-        knowledgeBase: '', // Initialize empty knowledgeBase
+      await postJSON("/api/users", {
+        userId: crypto.randomUUID(),
+        email,
+        displayName,
+        phoneNumber,
+        role: "user",
+        status: "pending",
+        geminiApiKey: "",
+        canManageApiKey: false,
+        knowledgeBase: "",
+        passwordHash,
       });
-
-      // Sign out the user immediately after signup, as they need to be approved
-      await auth.signOut();
 
       toast({
-          title: 'Signup Successful',
-          description: "Your account has been created and is awaiting approval from an administrator. You will be able to log in once approved."
+        title: "Signup Successful",
+        description:
+          "Your account has been created and is awaiting approval from an administrator. You will be able to log in once approved.",
       });
 
-      router.push('/'); // Redirect to login page after showing the message
+      router.push("/"); // Redirect to login page after showing the message
     } catch (error: any) {
       toast({
-        title: 'Signup Failed',
-        description: error.message,
-        variant: 'destructive',
+        title: "Signup Failed",
+        description: error?.message || "Could not create account",
+        variant: "destructive",
       });
     }
   };
@@ -71,14 +64,16 @@ export default function Signup() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-           <div className="flex items-center gap-2 justify-center mb-4">
+          <div className="flex items-center gap-2 justify-center mb-4">
             <Bot className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold font-headline text-foreground">
               OmniChat
             </h1>
           </div>
           <CardTitle>Create an Account</CardTitle>
-          <CardDescription>Get started with your own AI chatbot</CardDescription>
+          <CardDescription>
+            Get started with your own AI chatbot
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
@@ -115,7 +110,7 @@ export default function Signup() {
               />
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>              
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -125,10 +120,12 @@ export default function Signup() {
                 minLength={6}
               />
             </div>
-            <Button type="submit" className="w-full">Sign Up</Button>
+            <Button type="submit" className="w-full">
+              Sign Up
+            </Button>
           </form>
-           <p className="mt-4 text-center text-sm">
-            Already have an account?{' '}
+          <p className="mt-4 text-center text-sm">
+            Already have an account?{" "}
             <Link href="/" className="text-primary hover:underline">
               Log in
             </Link>

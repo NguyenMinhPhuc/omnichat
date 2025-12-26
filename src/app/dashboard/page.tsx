@@ -1,12 +1,10 @@
-
-'use client';
+"use client";
 
 import Dashboard from "@/components/Dashboard";
-import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { getJSON } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -16,33 +14,25 @@ export default function DashboardPage() {
   useEffect(() => {
     // If auth is not loading and there's no user, redirect to login immediately.
     if (!loading && !user) {
-      router.push('/');
+      router.push("/");
       return;
     }
 
     // If there is a user, check their role.
     if (!loading && user) {
       const checkRoleAndRedirect = async () => {
-        const userDocRef = doc(db, 'users', user.uid);
         try {
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            // If the user is an admin, redirect them to the admin dashboard.
-            if (userData.role === 'admin') {
-              router.push('/admin/dashboard');
-            } else {
-              // If the user is not an admin, authorize them to see the user dashboard.
-              setIsAuthorized(true);
-            }
+          const resp = await getJSON(
+            `/api/users/${encodeURIComponent(user.uid)}`
+          );
+          if (resp && resp.role === "admin") {
+            router.push("/admin/dashboard");
           } else {
-            // If user document doesn't exist for some reason, redirect to home.
-            console.error("User document not found for logged-in user.");
-            router.push('/');
+            setIsAuthorized(true);
           }
-        } catch (error) {
-            console.error("Error fetching user document:", error);
-            router.push('/'); // Redirect on error
+        } catch (err) {
+          console.error("Error fetching user role", err);
+          router.push("/");
         }
       };
       checkRoleAndRedirect();

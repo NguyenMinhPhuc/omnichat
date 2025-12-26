@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from './firebase';
-
-export const uploadFile = async (file: File, path: string): Promise<string> => {
-  const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, file);
-  const downloadURL = await getDownloadURL(storageRef);
-  return downloadURL;
+// Firebase storage was removed. This helper is intentionally a stub.
+export const uploadFile = async (
+  _file: File,
+  _path: string
+): Promise<string> => {
+  throw new Error(
+    "uploadFile is not available: server-side uploads are disabled."
+  );
 };

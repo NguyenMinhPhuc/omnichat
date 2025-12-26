@@ -1,33 +1,49 @@
+"use client";
 
-'use client';
-
-import { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, DocumentData, orderBy, updateDoc, doc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { MessageSquare, Bot, User, Calendar as CalendarIcon, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { addDays, format } from 'date-fns';
-import { Calendar } from "@/components/ui/calendar"
+import { useEffect, useState } from "react";
+import { getJSON, putJSON } from "@/lib/api";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  MessageSquare,
+  Bot,
+  User,
+  Calendar as CalendarIcon,
+  Check,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { addDays, format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { DateRange } from "react-day-picker"
+} from "@/components/ui/popover";
+import { DateRange } from "react-day-picker";
 
 interface ChatHistoryProps {
   chatbotId: string;
 }
 
-interface ChatSession extends DocumentData {
+interface ChatSession {
   id: string;
-  createdAt: any;
-  messages: { sender: 'user' | 'ai'; text: string }[];
+  createdAt: string;
+  messages: { sender: "user" | "ai"; text: string }[];
   isRead?: boolean;
 }
 
@@ -42,29 +58,26 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
   useEffect(() => {
     const fetchChatHistory = async () => {
       setLoading(true);
-      let q = query(
-        collection(db, 'chats'),
-        where('chatbotId', '==', chatbotId),
-        orderBy('createdAt', 'desc')
-      );
-
-      // Add date filtering if a date range is selected
-      if (date?.from) {
-        q = query(q, where('createdAt', '>=', date.from));
+      try {
+        const res = await getJSON(
+          `/api/chats/by-chatbot/${encodeURIComponent(chatbotId)}`
+        );
+        let sessions: ChatSession[] = res.chats ?? [];
+        // Client-side date filtering
+        if (date?.from) {
+          const from = new Date(date.from);
+          sessions = sessions.filter((s) => new Date(s.createdAt) >= from);
+        }
+        if (date?.to) {
+          const to = new Date(date.to);
+          to.setHours(23, 59, 59, 999);
+          sessions = sessions.filter((s) => new Date(s.createdAt) <= to);
+        }
+        setChatSessions(sessions);
+      } catch (err) {
+        console.error("Failed to fetch chat history", err);
+        setChatSessions([]);
       }
-      if (date?.to) {
-        // To make the 'to' date inclusive, we set the time to the end of the day.
-        const toDate = new Date(date.to);
-        toDate.setHours(23, 59, 59, 999);
-        q = query(q, where('createdAt', '<=', toDate));
-      }
-
-      const querySnapshot = await getDocs(q);
-      const sessions = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as ChatSession));
-      setChatSessions(sessions);
       setLoading(false);
     };
 
@@ -74,13 +87,14 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
   }, [chatbotId, date]);
 
   const handleMarkAsRead = async (sessionId: string) => {
-    const sessionRef = doc(db, 'chats', sessionId);
-    await updateDoc(sessionRef, {
-      isRead: true
-    });
+    try {
+      await putJSON(`/api/chats/${encodeURIComponent(sessionId)}`, {});
+    } catch (err) {
+      console.error("Failed to mark read", err);
+    }
     // Update local state to reflect the change immediately
-    setChatSessions(prevSessions =>
-      prevSessions.map(session =>
+    setChatSessions((prevSessions) =>
+      prevSessions.map((session) =>
         session.id === sessionId ? { ...session, isRead: true } : session
       )
     );
@@ -91,8 +105,12 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <CardTitle className="font-headline flex items-center gap-2"><MessageSquare /> Chat History</CardTitle>
-            <CardDescription>Review past conversations with your chatbot.</CardDescription>
+            <CardTitle className="font-headline flex items-center gap-2">
+              <MessageSquare /> Chat History
+            </CardTitle>
+            <CardDescription>
+              Review past conversations with your chatbot.
+            </CardDescription>
           </div>
           <Popover>
             <PopoverTrigger asChild>
@@ -137,25 +155,40 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
           {loading ? (
             <p>Loading chat history...</p>
           ) : chatSessions.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No chat history found for the selected period.</p>
+            <p className="text-muted-foreground text-center py-4">
+              No chat history found for the selected period.
+            </p>
           ) : (
             <div className="space-y-2">
-              {chatSessions.map(session => (
-                <Dialog key={session.id} onOpenChange={(open) => {
-                  if (open && !session.isRead) {
-                    handleMarkAsRead(session.id);
-                  }
-                }}>
+              {chatSessions.map((session) => (
+                <Dialog
+                  key={session.id}
+                  onOpenChange={(open) => {
+                    if (open && !session.isRead) {
+                      handleMarkAsRead(session.id);
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between h-auto py-2">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between h-auto py-2"
+                    >
                       <div className="flex items-center gap-2 text-left">
-                        {!session.isRead && <span className="h-2 w-2 rounded-full bg-primary" title="Unread"></span>}
+                        {!session.isRead && (
+                          <span
+                            className="h-2 w-2 rounded-full bg-primary"
+                            title="Unread"
+                          ></span>
+                        )}
                         <div className={cn(!session.isRead && "font-bold")}>
-                          Chat from {format(session.createdAt.toDate(), 'PPP p')}
+                          Chat from{" "}
+                          {format(session.createdAt.toDate(), "PPP p")}
                         </div>
-
-                        {session.isRead && <Check className="h-4 w-4 text-green-500" />}
-
+                      </div>
+                      {session.isRead && (
+                        <Check className="h-4 w-4 text-green-500" />
+                      )}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
@@ -165,18 +198,33 @@ export default function ChatHistory({ chatbotId }: ChatHistoryProps) {
                     <ScrollArea className="flex-1 pr-4 -mx-6 px-6">
                       <div className="space-y-4">
                         {session.messages.map((message, index) => (
-                          <div key={index} className={cn('flex items-end gap-2', message.sender === 'user' ? 'justify-end' : 'justify-start')}>
-                            {message.sender === 'ai' && (
+                          <div
+                            key={index}
+                            className={cn(
+                              "flex items-end gap-2",
+                              message.sender === "user"
+                                ? "justify-end"
+                                : "justify-start"
+                            )}
+                          >
+                            {message.sender === "ai" && (
                               <Avatar className="h-8 w-8 bg-primary">
                                 <AvatarFallback>
                                   <Bot className="text-primary-foreground" />
                                 </AvatarFallback>
                               </Avatar>
                             )}
-                            <div className={cn('max-w-md rounded-xl px-4 py-2 text-sm shadow', message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-card text-card-foreground rounded-bl-none border')}>
+                            <div
+                              className={cn(
+                                "max-w-md rounded-xl px-4 py-2 text-sm shadow",
+                                message.sender === "user"
+                                  ? "bg-primary text-primary-foreground rounded-br-none"
+                                  : "bg-card text-card-foreground rounded-bl-none border"
+                              )}
+                            >
                               <p>{message.text}</p>
                             </div>
-                            {message.sender === 'user' && (
+                            {message.sender === "user" && (
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback>
                                   <User />

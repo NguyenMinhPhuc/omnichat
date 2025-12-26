@@ -1,12 +1,9 @@
-
-'use client';
+"use client";
 
 import LeadsManagement from "@/components/LeadsManagement";
-import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function LeadsPage() {
   const { user, loading } = useAuth();
@@ -15,17 +12,17 @@ export default function LeadsPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/');
+      router.push("/");
       return;
     }
     if (!loading && user) {
-        setIsAuthorized(true);
+      setIsAuthorized(true);
     }
   }, [user, loading, router]);
 
   if (loading || !isAuthorized) {
     return <div>Loading...</div>;
   }
-  
+
   return <LeadsManagement />;
 }
