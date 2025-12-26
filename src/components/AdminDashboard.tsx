@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getJSON, patchJSON, del } from "@/lib/api";
+import { getJSON, patchJSON, del, postJSON } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "./ui/badge";
+import bcrypt from 'bcryptjs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -129,6 +130,14 @@ export default function AdminDashboard() {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [currentUserApiKey, setCurrentUserApiKey] = useState("");
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+  // Add user dialog state
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [newUserId, setNewUserId] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserDisplayName, setNewUserDisplayName] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"admin" | "user">("user");
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   useEffect(() => {
     // This function will be executed by useEffect.
@@ -305,6 +314,40 @@ export default function AdminDashboard() {
       });
     } finally {
       setIsSavingApiKey(false);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUserId) {
+      toast({ title: 'Validation', description: 'User ID is required', variant: 'destructive' });
+      return;
+    }
+    setIsCreatingUser(true);
+    try {
+      const payload: any = {
+        userId: newUserId,
+        email: newUserEmail || null,
+        displayName: newUserDisplayName || null,
+        role: newUserRole,
+        status: 'active',
+      };
+      if (newUserPassword) {
+        payload.passwordHash = bcrypt.hashSync(newUserPassword, 12);
+      }
+      await postJSON('/api/users', payload);
+      toast({ title: 'User Created', description: `${newUserId} created successfully.` });
+      setIsAddUserOpen(false);
+      // reset form
+      setNewUserId('');
+      setNewUserEmail('');
+      setNewUserDisplayName('');
+      setNewUserPassword('');
+      setNewUserRole('user');
+      await fetchUsersAndUsageData();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message || 'Failed to create user', variant: 'destructive' });
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -533,6 +576,11 @@ export default function AdminDashboard() {
                   <CardTitle className="flex items-center gap-2">
                     <Users /> User Management
                   </CardTitle>
+                  <div className="mt-2">
+                    <Button size="sm" variant="secondary" onClick={() => setIsAddUserOpen(true)}>
+                      Add User
+                    </Button>
+                  </div>
                   <CardDescription>
                     View, manage users and their permissions.
                   </CardDescription>
@@ -831,6 +879,48 @@ export default function AdminDashboard() {
         </SidebarInset>
 
         {/* API Key Management Dialog */}
+        {/* Add User Dialog */}
+        <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New User</DialogTitle>
+            </DialogHeader>
+            <div className="py-2 space-y-3">
+              <div>
+                <Label htmlFor="new-user-id">User ID</Label>
+                <Input id="new-user-id" value={newUserId} onChange={(e) => setNewUserId(e.target.value)} placeholder="unique-user-id" />
+              </div>
+              <div>
+                <Label htmlFor="new-user-email">Email</Label>
+                <Input id="new-user-email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com" />
+              </div>
+              <div>
+                <Label htmlFor="new-user-display">Display Name</Label>
+                <Input id="new-user-display" value={newUserDisplayName} onChange={(e) => setNewUserDisplayName(e.target.value)} placeholder="Full Name" />
+              </div>
+              <div>
+                <Label htmlFor="new-user-password">Password (optional)</Label>
+                <Input id="new-user-password" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="Set a password" />
+              </div>
+              <div>
+                <Label>Role</Label>
+                <Select onValueChange={(v) => setNewUserRole(v as any)} value={newUserRole}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="ghost">Cancel</Button>
+              </DialogClose>
+              <Button onClick={handleCreateUser} disabled={isCreatingUser}>{isCreatingUser ? 'Creating...' : 'Create User'}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
           <DialogContent>
             <DialogHeader>
