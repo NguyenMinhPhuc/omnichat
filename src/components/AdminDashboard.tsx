@@ -66,7 +66,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "./ui/badge";
-import bcrypt from 'bcryptjs';
+import bcrypt from "bcryptjs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,8 +187,14 @@ export default function AdminDashboard() {
   const fetchUsersAndUsageData = async () => {
     setIsLoadingUsers(true);
     try {
-      const userList = await getUsersWithUsageData();
-      setUsers(userList as UserData[]);
+      const userList = (await getUsersWithUsageData()) as any[];
+      const normalized = userList.map((u) => ({
+        ...u,
+        id: u.id || u.userId || u.uid,
+        email: u.email || u.emailAddress || null,
+        displayName: u.displayName || u.name || "",
+      }));
+      setUsers(normalized as UserData[]);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
@@ -230,7 +236,13 @@ export default function AdminDashboard() {
     try {
       await patchJSON(`/api/users/${encodeURIComponent(userId)}`, { role });
       setUsers(users.map((u) => (u.id === userId ? { ...u, role } : u)));
-      toast({ title: "Success", description: "User role updated." });
+      const target = users.find((u) => u.id === userId);
+      toast({
+        title: "User updated",
+        description: `${
+          target?.displayName || target?.email || userId
+        } role set to ${role}.`,
+      });
     } catch (err: any) {
       toast({
         title: "Error",
@@ -247,7 +259,13 @@ export default function AdminDashboard() {
     try {
       await patchJSON(`/api/users/${encodeURIComponent(userId)}`, { status });
       setUsers(users.map((u) => (u.id === userId ? { ...u, status } : u)));
-      toast({ title: "Success", description: "User status updated." });
+      const target = users.find((u) => u.id === userId);
+      toast({
+        title: "User updated",
+        description: `${
+          target?.displayName || target?.email || userId
+        } status set to ${status}.`,
+      });
     } catch (err: any) {
       toast({
         title: "Error",
@@ -319,7 +337,11 @@ export default function AdminDashboard() {
 
   const handleCreateUser = async () => {
     if (!newUserId) {
-      toast({ title: 'Validation', description: 'User ID is required', variant: 'destructive' });
+      toast({
+        title: "Validation",
+        description: "User ID is required",
+        variant: "destructive",
+      });
       return;
     }
     setIsCreatingUser(true);
@@ -329,23 +351,30 @@ export default function AdminDashboard() {
         email: newUserEmail || null,
         displayName: newUserDisplayName || null,
         role: newUserRole,
-        status: 'active',
+        status: "active",
       };
       if (newUserPassword) {
         payload.passwordHash = bcrypt.hashSync(newUserPassword, 12);
       }
-      await postJSON('/api/users', payload);
-      toast({ title: 'User Created', description: `${newUserId} created successfully.` });
+      await postJSON("/api/users", payload);
+      toast({
+        title: "User Created",
+        description: `${newUserId} created successfully.`,
+      });
       setIsAddUserOpen(false);
       // reset form
-      setNewUserId('');
-      setNewUserEmail('');
-      setNewUserDisplayName('');
-      setNewUserPassword('');
-      setNewUserRole('user');
+      setNewUserId("");
+      setNewUserEmail("");
+      setNewUserDisplayName("");
+      setNewUserPassword("");
+      setNewUserRole("user");
       await fetchUsersAndUsageData();
     } catch (err: any) {
-      toast({ title: 'Error', description: err?.message || 'Failed to create user', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to create user",
+        variant: "destructive",
+      });
     } finally {
       setIsCreatingUser(false);
     }
@@ -361,9 +390,12 @@ export default function AdminDashboard() {
           u.id === userId ? { ...u, canManageApiKey: checked } : u
         )
       );
+      const target = users.find((u) => u.id === userId);
       toast({
-        title: "Success",
-        description: "Permission updated successfully.",
+        title: "User updated",
+        description: `${
+          target?.displayName || target?.email || userId
+        } permission for API Key ${checked ? "granted" : "revoked"}.`,
       });
     } catch (error: any) {
       toast({
@@ -577,7 +609,11 @@ export default function AdminDashboard() {
                     <Users /> User Management
                   </CardTitle>
                   <div className="mt-2">
-                    <Button size="sm" variant="secondary" onClick={() => setIsAddUserOpen(true)}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setIsAddUserOpen(true)}
+                    >
                       Add User
                     </Button>
                   </div>
@@ -888,24 +924,50 @@ export default function AdminDashboard() {
             <div className="py-2 space-y-3">
               <div>
                 <Label htmlFor="new-user-id">User ID</Label>
-                <Input id="new-user-id" value={newUserId} onChange={(e) => setNewUserId(e.target.value)} placeholder="unique-user-id" />
+                <Input
+                  id="new-user-id"
+                  value={newUserId}
+                  onChange={(e) => setNewUserId(e.target.value)}
+                  placeholder="unique-user-id"
+                />
               </div>
               <div>
                 <Label htmlFor="new-user-email">Email</Label>
-                <Input id="new-user-email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com" />
+                <Input
+                  id="new-user-email"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  placeholder="user@example.com"
+                />
               </div>
               <div>
                 <Label htmlFor="new-user-display">Display Name</Label>
-                <Input id="new-user-display" value={newUserDisplayName} onChange={(e) => setNewUserDisplayName(e.target.value)} placeholder="Full Name" />
+                <Input
+                  id="new-user-display"
+                  value={newUserDisplayName}
+                  onChange={(e) => setNewUserDisplayName(e.target.value)}
+                  placeholder="Full Name"
+                />
               </div>
               <div>
                 <Label htmlFor="new-user-password">Password (optional)</Label>
-                <Input id="new-user-password" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="Set a password" />
+                <Input
+                  id="new-user-password"
+                  type="password"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  placeholder="Set a password"
+                />
               </div>
               <div>
                 <Label>Role</Label>
-                <Select onValueChange={(v) => setNewUserRole(v as any)} value={newUserRole}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <Select
+                  onValueChange={(v) => setNewUserRole(v as any)}
+                  value={newUserRole}
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
@@ -917,7 +979,9 @@ export default function AdminDashboard() {
               <DialogClose asChild>
                 <Button variant="ghost">Cancel</Button>
               </DialogClose>
-              <Button onClick={handleCreateUser} disabled={isCreatingUser}>{isCreatingUser ? 'Creating...' : 'Create User'}</Button>
+              <Button onClick={handleCreateUser} disabled={isCreatingUser}>
+                {isCreatingUser ? "Creating..." : "Create User"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
