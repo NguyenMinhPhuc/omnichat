@@ -1,8 +1,28 @@
 import { runProcedure, Types } from "@/lib/mssql";
 import { UserEntity } from "../models/entities";
 
-export async function listUsers(): Promise<UserEntity[]> {
-  const result = await runProcedure<UserEntity>("spUsers_List");
+export interface ListUsersOptions {
+  search?: string | null;
+  role?: string | null;
+  status?: string | null;
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc" | null;
+  skip?: number;
+  take?: number;
+}
+
+export async function listUsers(
+  options: ListUsersOptions = {}
+): Promise<UserEntity[]> {
+  const result = await runProcedure<UserEntity>("spUsers_List", {
+    Search: { type: Types.NVarChar, value: options.search ?? null },
+    Role: { type: Types.NVarChar, value: options.role ?? null },
+    Status: { type: Types.NVarChar, value: options.status ?? null },
+    SortBy: { type: Types.NVarChar, value: options.sortBy ?? "updatedAt" },
+    SortDir: { type: Types.NVarChar, value: options.sortDir ?? "desc" },
+    Skip: { type: Types.Int, value: options.skip ?? 0 },
+    Take: { type: Types.Int, value: options.take ?? 100 },
+  });
   return result.recordset ?? [];
 }
 
@@ -27,6 +47,8 @@ export async function createUser(user: UserEntity): Promise<void> {
     UserId: { type: Types.NVarChar, value: user.userId },
     Email: { type: Types.NVarChar, value: user.email ?? null },
     DisplayName: { type: Types.NVarChar, value: user.displayName ?? null },
+    PhoneNumber: { type: Types.NVarChar, value: user.phoneNumber ?? null },
+    AvatarUrl: { type: Types.NVarChar, value: user.avatarUrl ?? null },
     PasswordHash: { type: Types.NVarChar, value: user.passwordHash ?? null },
     Role: { type: Types.NVarChar, value: user.role ?? null },
     Status: { type: Types.NVarChar, value: user.status ?? null },
@@ -45,6 +67,8 @@ export async function updateUser(
     UserId: { type: Types.NVarChar, value: userId },
     Email: { type: Types.NVarChar, value: updates.email ?? null },
     DisplayName: { type: Types.NVarChar, value: updates.displayName ?? null },
+    PhoneNumber: { type: Types.NVarChar, value: updates.phoneNumber ?? null },
+    AvatarUrl: { type: Types.NVarChar, value: updates.avatarUrl ?? null },
     PasswordHash: { type: Types.NVarChar, value: updates.passwordHash ?? null },
     Role: { type: Types.NVarChar, value: updates.role ?? null },
     Status: { type: Types.NVarChar, value: updates.status ?? null },

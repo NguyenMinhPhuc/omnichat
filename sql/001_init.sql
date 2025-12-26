@@ -28,6 +28,8 @@ BEGIN
     -- Firebase UID
     Email NVARCHAR(256) NULL UNIQUE,
     DisplayName NVARCHAR(256) NULL,
+    PhoneNumber NVARCHAR(64) NULL,
+    AvatarUrl NVARCHAR(512) NULL,
     PasswordHash NVARCHAR(512) NULL,
     Role NVARCHAR(64) NULL,
     Status NVARCHAR(32) NULL,
@@ -209,12 +211,25 @@ GO
 IF OBJECT_ID('dbo.spUsers_List', 'P') IS NOT NULL DROP PROCEDURE dbo.spUsers_List;
 GO
 CREATE PROCEDURE dbo.spUsers_List
+  @Search NVARCHAR(256) = NULL,
+  @Role NVARCHAR(64) = NULL,
+  @Status NVARCHAR(32) = NULL,
+  @SortBy NVARCHAR(64) = 'updatedAt',
+  @SortDir NVARCHAR(4) = 'DESC',
+  -- 'ASC' or 'DESC'
+  @Skip INT = 0,
+  @Take INT = 100
 AS
 BEGIN
   SET NOCOUNT ON;
+  DECLARE @SearchTrim NVARCHAR(256) = NULL;
+  IF @Search IS NOT NULL SET @SearchTrim = LTRIM(RTRIM(@Search));
+
   SELECT UserId AS userId,
     Email AS email,
     DisplayName AS displayName,
+    PhoneNumber AS phoneNumber,
+    AvatarUrl AS avatarUrl,
     PasswordHash AS passwordHash,
     Role AS role,
     Status AS status,
@@ -223,7 +238,24 @@ BEGIN
     CanManageApiKey AS canManageApiKey,
     CreatedAt AS createdAt,
     UpdatedAt AS updatedAt
-  FROM dbo.Users;
+  FROM dbo.Users
+  WHERE (@SearchTrim IS NULL OR (
+      LOWER(UserId) LIKE '%' + LOWER(@SearchTrim) + '%' OR
+    LOWER(Email) LIKE '%' + LOWER(@SearchTrim) + '%' OR
+    LOWER(DisplayName) LIKE '%' + LOWER(@SearchTrim) + '%'
+    ))
+    AND (@Role IS NULL OR Role = @Role)
+    AND (@Status IS NULL OR Status = @Status)
+  ORDER BY
+    CASE WHEN LOWER(@SortBy) = 'email' AND LOWER(@SortDir) = 'asc' THEN Email END ASC,
+    CASE WHEN LOWER(@SortBy) = 'email' AND LOWER(@SortDir) = 'desc' THEN Email END DESC,
+    CASE WHEN LOWER(@SortBy) = 'displayname' AND LOWER(@SortDir) = 'asc' THEN DisplayName END ASC,
+    CASE WHEN LOWER(@SortBy) = 'displayname' AND LOWER(@SortDir) = 'desc' THEN DisplayName END DESC,
+    CASE WHEN LOWER(@SortBy) = 'createdat' AND LOWER(@SortDir) = 'asc' THEN CreatedAt END ASC,
+    CASE WHEN LOWER(@SortBy) = 'createdat' AND LOWER(@SortDir) = 'desc' THEN CreatedAt END DESC,
+    CASE WHEN LOWER(@SortBy) = 'updatedat' AND LOWER(@SortDir) = 'asc' THEN UpdatedAt END ASC,
+    CASE WHEN LOWER(@SortBy) = 'updatedat' AND LOWER(@SortDir) = 'desc' THEN UpdatedAt END DESC
+  OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
 END
 GO
 
@@ -237,6 +269,8 @@ BEGIN
   SELECT UserId AS userId,
     Email AS email,
     DisplayName AS displayName,
+    PhoneNumber AS phoneNumber,
+    AvatarUrl AS avatarUrl,
     PasswordHash AS passwordHash,
     Role AS role,
     Status AS status,
@@ -261,6 +295,8 @@ BEGIN
   SELECT UserId AS userId,
     Email AS email,
     DisplayName AS displayName,
+    PhoneNumber AS phoneNumber,
+    AvatarUrl AS avatarUrl,
     PasswordHash AS passwordHash,
     Role AS role,
     Status AS status,
@@ -280,6 +316,8 @@ CREATE PROCEDURE dbo.spUsers_Create
   @UserId NVARCHAR(128),
   @Email NVARCHAR(256) = NULL,
   @DisplayName NVARCHAR(256) = NULL,
+  @PhoneNumber NVARCHAR(64) = NULL,
+  @AvatarUrl NVARCHAR(512) = NULL,
   @PasswordHash NVARCHAR(512) = NULL,
   @Role NVARCHAR(64) = NULL,
   @Status NVARCHAR(32) = NULL,
@@ -290,9 +328,9 @@ AS
 BEGIN
   SET NOCOUNT ON;
   INSERT INTO dbo.Users
-    (UserId, Email, DisplayName, PasswordHash, Role, Status, GeminiApiKey, KnowledgeBase, CanManageApiKey)
+    (UserId, Email, DisplayName, PhoneNumber, AvatarUrl, PasswordHash, Role, Status, GeminiApiKey, KnowledgeBase, CanManageApiKey)
   VALUES
-    (@UserId, @Email, @DisplayName, @PasswordHash, @Role, @Status, @GeminiApiKey, @KnowledgeBase, @CanManageApiKey);
+    (@UserId, @Email, @DisplayName, @PhoneNumber, @AvatarUrl, @PasswordHash, @Role, @Status, @GeminiApiKey, @KnowledgeBase, @CanManageApiKey);
 END
 GO
 
@@ -302,6 +340,8 @@ CREATE PROCEDURE dbo.spUsers_UpdatePartial
   @UserId NVARCHAR(128),
   @Email NVARCHAR(256) = NULL,
   @DisplayName NVARCHAR(256) = NULL,
+  @PhoneNumber NVARCHAR(64) = NULL,
+  @AvatarUrl NVARCHAR(512) = NULL,
   @PasswordHash NVARCHAR(512) = NULL,
   @Role NVARCHAR(64) = NULL,
   @Status NVARCHAR(32) = NULL,
@@ -314,6 +354,8 @@ BEGIN
   UPDATE dbo.Users
   SET Email = COALESCE(@Email, Email),
       DisplayName = COALESCE(@DisplayName, DisplayName),
+      PhoneNumber = COALESCE(@PhoneNumber, PhoneNumber),
+      AvatarUrl = COALESCE(@AvatarUrl, AvatarUrl),
       PasswordHash = COALESCE(@PasswordHash, PasswordHash),
       Role = COALESCE(@Role, Role),
       Status = COALESCE(@Status, Status),

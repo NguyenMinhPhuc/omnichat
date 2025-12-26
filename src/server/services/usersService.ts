@@ -1,8 +1,10 @@
 import { UserEntity } from "../models/entities";
 import * as repo from "../repositories/usersRepository";
 
-export async function list(): Promise<UserEntity[]> {
-  return repo.listUsers();
+export type ListUsersOptions = repo.ListUsersOptions;
+
+export async function list(options?: ListUsersOptions): Promise<UserEntity[]> {
+  return repo.listUsers(options ?? {});
 }
 
 export async function get(userId: string): Promise<UserEntity | null> {

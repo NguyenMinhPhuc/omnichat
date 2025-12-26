@@ -214,15 +214,37 @@ export async function deleteKnowledgeSource(
   }
 }
 
-export async function getUsersWithUsageData() {
+export type ListOptions = {
+  search?: string | null;
+  role?: string | null;
+  status?: string | null;
+  sortBy?: string | null;
+  sortDir?: "asc" | "desc" | null;
+  page?: number;
+  pageSize?: number;
+};
+
+export async function getUsersWithUsageData(options: ListOptions = {}) {
   try {
     const now = new Date();
     const monthYear = `${now.getFullYear()}-${(now.getMonth() + 1)
       .toString()
       .padStart(2, "0")}`;
 
-    // Get all users from SQL
-    const users = await usersService.list();
+    const page = options.page ?? 1;
+    const pageSize = options.pageSize ?? 50;
+    const skip = (page - 1) * pageSize;
+
+    // Get users from SQL with filters/sort/pagination
+    const users = await usersService.list({
+      search: options.search ?? null,
+      role: options.role ?? null,
+      status: options.status ?? null,
+      sortBy: options.sortBy ?? null,
+      sortDir: options.sortDir ?? null,
+      skip,
+      take: pageSize,
+    });
 
     // Get usage data for current month
     const usageResult = await runQuery(

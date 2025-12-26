@@ -91,6 +91,8 @@ export default function CustomizationPanel({
 }: CustomizationPanelProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const iconInputRef = useRef<HTMLInputElement | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSource, setCurrentSource] =
@@ -122,23 +124,87 @@ export default function CustomizationPanel({
     e: React.ChangeEvent<HTMLInputElement>,
     field: "logoUrl" | "chatbotIconUrl"
   ) => {
-    // Server-side file upload endpoint not implemented yet.
-    // For now, ask users to paste a public URL instead of uploading files.
-    toast({
-      title: "Upload Disabled",
-      description:
-        "Server-side uploads are disabled. Please paste an image URL into the field instead.",
-      variant: "default",
-    });
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      await new Promise<void>((resolve, reject) => {
+        reader.onload = async () => {
+          try {
+            const dataUrl = reader.result as string;
+            const filename = `${Date.now()}-${file.name.replace(
+              /[^a-z0-9.\-]/gi,
+              "_"
+            )}`;
+            const res = await fetch("/api/upload-avatar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: chatbotId || "public",
+                filename,
+                dataUrl,
+              }),
+            });
+            if (!res.ok) {
+              const txt = await res.text();
+              throw new Error(txt || "Upload failed");
+            }
+            const json = await res.json();
+            const url = json.url as string;
+            setCustomization((prev) => ({ ...prev, [field]: url } as any));
+            toast({
+              title: "Uploaded",
+              description: "Image uploaded.",
+              variant: "default",
+            });
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error("Failed to read file"));
+      });
+    } catch (err) {
+      const error = err as Error;
+      toast({
+        title: "Upload Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      // clear the input value to allow re-uploading same file if needed
+      try {
+        if (field === "logoUrl") {
+          if (logoInputRef && logoInputRef.current)
+            logoInputRef.current.value = "";
+        } else {
+          if (iconInputRef && iconInputRef.current)
+            iconInputRef.current.value = "";
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
   };
 
   const handleSaveCustomization = async () => {
-    if (!user) return;
+    if (!chatbotId) return;
     setIsSaving(true);
     try {
-      await putJSON(`/api/customization/${encodeURIComponent(user.uid)}`, {
-        data: customization,
-      });
+      await putJSON(
+        `/api/customization/${encodeURIComponent(chatbotId)}`,
+        customization
+      );
       toast({ title: "Success", description: "Customization settings saved." });
     } catch (e) {
       const error = e as Error;
@@ -451,6 +517,19 @@ export default function CustomizationPanel({
                         value={customization.logoUrl || ""}
                         onChange={handleInputChange}
                       />
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileChange(e, "logoUrl")}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => logoInputRef.current?.click()}
+                      >
+                        Upload
+                      </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -475,6 +554,19 @@ export default function CustomizationPanel({
                         value={customization.chatbotIconUrl || ""}
                         onChange={handleInputChange}
                       />
+                      <input
+                        ref={iconInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileChange(e, "chatbotIconUrl")}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => iconInputRef.current?.click()}
+                      >
+                        Upload
+                      </Button>
                     </div>
                   </div>
                 </div>

@@ -405,7 +405,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                         alt="Chatbot"
                       />
                       <AvatarFallback
-                        style={{ backgroundColor: customization.accentColor }}
+                        style={{ backgroundColor: "var(--chat-accent-color)" }}
                       >
                         <Bot className="text-white" />
                       </AvatarFallback>
@@ -440,7 +440,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                       alt="Chatbot"
                     />
                     <AvatarFallback
-                      style={{ backgroundColor: customization.accentColor }}
+                      style={{ backgroundColor: "var(--chat-accent-color)" }}
                     >
                       <Bot className="text-white" />
                     </AvatarFallback>
@@ -472,7 +472,7 @@ export default function LiveChatbot({ chatbotId }: LiveChatbotProps) {
                     <Badge
                       key={item.id}
                       variant="outline"
-                      className="cursor-pointer hover:bg-accent"
+                      className="cursor-pointer hover:bg-[--chat-accent-color] hover:text-white"
                       onClick={() => handleScriptedMessage(item)}
                     >
                       {item.question}

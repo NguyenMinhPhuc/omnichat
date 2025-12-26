@@ -124,6 +124,11 @@ export default function AdminDashboard() {
   const [displayName, setDisplayName] = useState("");
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string | null>("displayName");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(20);
 
   // State for API Key management dialog
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
@@ -187,7 +192,14 @@ export default function AdminDashboard() {
   const fetchUsersAndUsageData = async () => {
     setIsLoadingUsers(true);
     try {
-      const userList = (await getUsersWithUsageData()) as any[];
+      const userList = (await getUsersWithUsageData({
+        search: searchTerm || null,
+        role: roleFilter || null,
+        sortBy: sortBy || null,
+        sortDir: sortDir || null,
+        page,
+        pageSize,
+      })) as any[];
       const normalized = userList.map((u) => ({
         ...u,
         id: u.id || u.userId || u.uid,
@@ -207,6 +219,14 @@ export default function AdminDashboard() {
     }
   };
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      fetchUsersAndUsageData();
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, roleFilter, sortBy, sortDir, page, pageSize]);
+
   const stats = useMemo(() => {
     return {
       total: users.length,
@@ -221,16 +241,8 @@ export default function AdminDashboard() {
     };
   }, [users]);
 
-  const filteredUsers = useMemo(() => {
-    if (!searchTerm) {
-      return users;
-    }
-    return users.filter(
-      (user) =>
-        user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [users, searchTerm]);
+  // Server returns filtered/paged list; use directly
+  const filteredUsers = users;
 
   const handleRoleChange = async (userId: string, role: "admin" | "user") => {
     try {
@@ -632,10 +644,94 @@ export default function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-40">
+                    <Select
+                      value={roleFilter ?? "all"}
+                      onValueChange={(v) => {
+                        setRoleFilter(v === "all" ? null : v);
+                        setPage(1);
+                        fetchUsersAndUsageData();
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="user">User</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2">
+                    <Label>Page</Label>
+                    <Input
+                      type="number"
+                      value={page}
+                      onChange={(e) => {
+                        const p = Math.max(
+                          1,
+                          parseInt(e.target.value || "1", 10)
+                        );
+                        setPage(p);
+                      }}
+                      className="w-20"
+                    />
+                    <Button
+                      onClick={() => {
+                        fetchUsersAndUsageData();
+                      }}
+                    >
+                      Go
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setPage((s) => Math.max(1, s - 1));
+                        setTimeout(fetchUsersAndUsageData, 0);
+                      }}
+                    >
+                      Prev
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setPage((s) => s + 1);
+                        setTimeout(fetchUsersAndUsageData, 0);
+                      }}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>User</TableHead>
+                      <TableHead>
+                        <button
+                          className="inline-flex items-center gap-2"
+                          onClick={() => {
+                            const nextDir =
+                              sortBy === "displayName" && sortDir === "asc"
+                                ? "desc"
+                                : "asc";
+                            setSortBy("displayName");
+                            setSortDir(nextDir);
+                            setPage(1);
+                            fetchUsersAndUsageData();
+                          }}
+                        >
+                          User
+                          <span className="text-xs text-muted-foreground">
+                            {sortBy === "displayName"
+                              ? sortDir === "asc"
+                                ? "↑"
+                                : "↓"
+                              : ""}
+                          </span>
+                        </button>
+                      </TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Permissions</TableHead>

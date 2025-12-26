@@ -1,12 +1,13 @@
-import type {Metadata} from 'next';
-import './globals.css';
-import { AuthProvider } from '@/context/AuthContext';
-import { Suspense } from 'react';
-import FloatingChatbot from '@/components/FloatingChatbot';
+import type { Metadata } from "next";
+import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
+import { Suspense } from "react";
+import FloatingChatbot from "@/components/FloatingChatbot";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: 'OmniChat',
-  description: 'Your custom knowledge base AI Chatbot.',
+  title: "OmniChat",
+  description: "Your custom knowledge base AI Chatbot.",
 };
 
 export default function RootLayout({
@@ -18,15 +19,23 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=PT+Sans:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-            <Suspense fallback={<div>Loading...</div>}>
-                {children}
-                <FloatingChatbot />
-            </Suspense>
+          <Suspense fallback={<div>Loading...</div>}>
+            <div className="min-h-screen pb-16">{children}</div>
+            <FloatingChatbot />
+            <Footer />
+          </Suspense>
         </AuthProvider>
       </body>
     </html>

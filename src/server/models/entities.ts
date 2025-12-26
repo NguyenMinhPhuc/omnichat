@@ -2,6 +2,8 @@ export interface UserEntity {
   userId: string;
   email?: string | null;
   displayName?: string | null;
+  phoneNumber?: string | null;
+  avatarUrl?: string | null;
   passwordHash?: string | null;
   role?: string | null;
   status?: string | null;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getJSON, putJSON } from "@/lib/api";
@@ -62,6 +63,8 @@ export default function Profile() {
   const router = useRouter();
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<"user" | "admin" | null>(null);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
   const [displayName, setDisplayName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -74,18 +77,31 @@ export default function Profile() {
     if (!loading && !user) {
       router.push("/");
     } else if (user) {
+      // first fetch current user's own record to determine role
       getJSON(`/api/users/${user.uid}`)
-        .then((userData: any) => {
-          setUserRole(userData.role);
-          setDisplayName(userData.displayName || "");
-          setPhoneNumber(userData.phoneNumber || "");
-          setAvatarUrl(userData.avatarUrl || null);
-          setKnowledgeBase(userData.knowledgeBase || "");
-          setGeminiApiKey(userData.geminiApiKey || "");
-          setCanManageApiKey(userData.canManageApiKey || false);
+        .then(async (currentData: any) => {
+          setUserRole(currentData.role);
+          // determine which profile to load: optional ?userId= for admins
+          const otherId = searchParams.get("userId");
+          const targetId =
+            otherId && currentData.role === "admin" ? otherId : user.uid;
+          setTargetUserId(targetId);
+
+          // fetch target user's profile
+          try {
+            const userData = await getJSON(`/api/users/${targetId}`);
+            setDisplayName(userData.displayName || "");
+            setPhoneNumber(userData.phoneNumber || "");
+            setAvatarUrl(userData.avatarUrl || null);
+            setKnowledgeBase(userData.knowledgeBase || "");
+            setGeminiApiKey(userData.geminiApiKey || "");
+            setCanManageApiKey(userData.canManageApiKey || false);
+          } catch (err) {
+            console.error("Failed to load target user profile:", err);
+          }
         })
         .catch((err) => {
-          console.error("Failed to load user profile:", err);
+          console.error("Failed to load current user profile:", err);
         });
     }
   }, [user, loading, router]);
@@ -129,10 +145,61 @@ export default function Profile() {
   const handleAvatarChange = async (
     _e: React.ChangeEvent<HTMLInputElement>
   ) => {
+    const input = _e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please pick an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const reader = new FileReader();
+      const dataUrl: string = await new Promise((res, rej) => {
+        reader.onload = () => res(reader.result as string);
+        reader.onerror = () => rej(new Error("Failed to read file"));
+        reader.readAsDataURL(file);
+      });
+
+      const filename = `${user.uid}-${Date.now()}-${file.name.replace(
+        /[^a-zA-Z0-9._-]/g,
+        "_"
+      )}`;
+      const resp = await fetch("/api/upload-avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid, filename, dataUrl }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.message || "Upload failed");
+      setAvatarUrl(json.url);
+      toast({ title: "Uploaded", description: "Avatar uploaded." });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Upload Failed",
+        description: err?.message || "",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    // Password reset via auth provider is not implemented in the new backend.
     toast({
-      title: "Upload Disabled",
-      description:
-        "Avatar upload is temporarily disabled pending backend endpoint.",
+      title: "Not Implemented",
+      description: "Password reset must be handled via backend admin tools.",
       variant: "destructive",
     });
   };

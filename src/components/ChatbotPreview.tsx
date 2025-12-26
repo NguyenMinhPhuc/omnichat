@@ -1,22 +1,26 @@
+"use client";
 
-'use client';
-
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader } from 'lucide-react';
-import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import type { CustomizationState, ScenarioItem } from './Dashboard';
-import Logo from './Logo';
-import { Badge } from './ui/badge';
-import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
+import React, { useState, useRef, useEffect } from "react";
+import { Send, Bot, User, Loader } from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import type { CustomizationState, ScenarioItem } from "./Dashboard";
+import Logo from "./Logo";
+import { Badge } from "./ui/badge";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 
 export interface Message {
-  sender: 'user' | 'ai';
+  sender: "user" | "ai";
   text: string;
 }
 
@@ -35,18 +39,25 @@ export default function ChatbotPreview({
   isAiTyping,
   onSendMessage,
 }: ChatbotPreviewProps) {
-  const [inputValue, setInputValue] = useState('');
-  const [currentScriptedQuestions, setCurrentScriptedQuestions] = useState<ScenarioItem[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [currentScriptedQuestions, setCurrentScriptedQuestions] = useState<
+    ScenarioItem[]
+  >([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Initialize with root questions
-    setCurrentScriptedQuestions(scenario.filter(item => item.parentId === null));
+    setCurrentScriptedQuestions(
+      scenario.filter((item) => item.parentId === null)
+    );
   }, [scenario]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [messages, isAiTyping, currentScriptedQuestions]);
 
@@ -56,16 +67,18 @@ export default function ChatbotPreview({
 
   const handleScriptedMessage = (item: ScenarioItem) => {
     // Simulate scripted interaction for preview
-    const userMessage: Message = { sender: 'user', text: item.question };
-    const aiMessage: Message = { sender: 'ai', text: item.answer };
+    const userMessage: Message = { sender: "user", text: item.question };
+    const aiMessage: Message = { sender: "ai", text: item.answer };
 
     // This part is tricky in preview. We'll just add to local messages.
     // The parent Dashboard component handles the real AI call.
     // To make preview work well, we can call a modified onSendMessage.
     // For now, let's just update the script questions.
-    const nextQuestions = scenario.filter(child => child.parentId === item.id);
+    const nextQuestions = scenario.filter(
+      (child) => child.parentId === item.id
+    );
     setCurrentScriptedQuestions(nextQuestions);
-    
+
     // Fake the message exchange for preview
     // In a real scenario, the parent would handle this.
     // For preview, let's assume `onSendMessage` just adds the message.
@@ -80,13 +93,13 @@ export default function ChatbotPreview({
     if (!inputValue.trim()) return;
     onSendMessage(inputValue);
     setCurrentScriptedQuestions([]); // Hide suggestions on free text
-    setInputValue('');
+    setInputValue("");
   };
 
   const customStyles = {
-    '--chat-bg-color': customization.backgroundColor,
-    '--chat-primary-color': customization.primaryColor,
-    '--chat-accent-color': customization.accentColor,
+    "--chat-bg-color": customization.backgroundColor,
+    "--chat-primary-color": customization.primaryColor,
+    "--chat-accent-color": customization.accentColor,
   } as React.CSSProperties;
 
   return (
@@ -95,7 +108,9 @@ export default function ChatbotPreview({
         <div className="flex items-center space-x-3">
           <Logo logoUrl={customization.logoUrl} />
           <div className="flex flex-col">
-            <h2 className="font-bold text-lg font-headline">{customization.chatbotName}</h2>
+            <h2 className="font-bold text-lg font-headline">
+              {customization.chatbotName}
+            </h2>
             <p className="text-xs text-primary-foreground/80">Online</p>
           </div>
         </div>
@@ -104,26 +119,39 @@ export default function ChatbotPreview({
         <ScrollArea className="h-full" ref={scrollAreaRef}>
           <div className="p-4 space-y-4">
             {messages.map((message, index) => (
-              <div key={index} className={cn('flex items-end gap-2', message.sender === 'user' ? 'justify-end' : 'justify-start')}>
-                {message.sender === 'ai' && (
+              <div
+                key={index}
+                className={cn(
+                  "flex items-end gap-2",
+                  message.sender === "user" ? "justify-end" : "justify-start"
+                )}
+              >
+                {message.sender === "ai" && (
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={customization.chatbotIconUrl || ''} alt="Chatbot" />
-                    <AvatarFallback style={{backgroundColor: customization.accentColor}}>
-                        <Bot className="text-white" />
+                    <AvatarImage
+                      src={customization.chatbotIconUrl || ""}
+                      alt="Chatbot"
+                    />
+                    <AvatarFallback
+                      style={{ backgroundColor: "var(--chat-accent-color)" }}
+                    >
+                      <Bot className="text-white" />
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <div
                   className={cn(
-                    'max-w-xs md:max-w-md lg:max-w-lg rounded-xl px-4 py-2 text-sm shadow',
-                    message.sender === 'user'
-                      ? 'bg-[--chat-primary-color] text-primary-foreground rounded-br-none'
-                      : 'bg-card text-card-foreground rounded-bl-none'
+                    "max-w-xs md:max-w-md lg:max-w-lg rounded-xl px-4 py-2 text-sm shadow",
+                    message.sender === "user"
+                      ? "bg-[--chat-primary-color] text-primary-foreground rounded-br-none"
+                      : "bg-card text-card-foreground rounded-bl-none"
                   )}
                 >
-                  <ReactMarkdown rehypePlugins={[rehypeRaw]}>{message.text}</ReactMarkdown>
+                  <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                    {message.text}
+                  </ReactMarkdown>
                 </div>
-                 {message.sender === 'user' && (
+                {message.sender === "user" && (
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
                       <User />
@@ -132,42 +160,50 @@ export default function ChatbotPreview({
                 )}
               </div>
             ))}
-             {isAiTyping && (
-                <div className="flex items-end gap-2 justify-start">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={customization.chatbotIconUrl || ''} alt="Chatbot" />
-                        <AvatarFallback style={{backgroundColor: customization.accentColor}}>
-                            <Bot className="text-white" />
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="bg-card text-card-foreground rounded-xl px-4 py-2 text-sm shadow rounded-bl-none flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-0"></span>
-                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-150"></span>
-                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-300"></span>
-                    </div>
+            {isAiTyping && (
+              <div className="flex items-end gap-2 justify-start">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    src={customization.chatbotIconUrl || ""}
+                    alt="Chatbot"
+                  />
+                  <AvatarFallback
+                    style={{ backgroundColor: "var(--chat-accent-color)" }}
+                  >
+                    <Bot className="text-white" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="bg-card text-card-foreground rounded-xl px-4 py-2 text-sm shadow rounded-bl-none flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-0"></span>
+                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-150"></span>
+                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse delay-300"></span>
                 </div>
+              </div>
             )}
           </div>
-           {!isAiTyping && currentScriptedQuestions.length > 0 && (
-                <div className="p-4 pt-0 flex flex-wrap gap-2 justify-start">
-                    {currentScriptedQuestions.map(item => (
-                        <Badge 
-                            key={item.id} 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-accent"
-                            // In preview, this click won't trigger a real AI response.
-                            // It will just show the next set of questions if any.
-                            onClick={() => handleScriptedMessage(item)}
-                        >
-                            {item.question}
-                        </Badge>
-                    ))}
-                </div>
-            )}
+          {!isAiTyping && currentScriptedQuestions.length > 0 && (
+            <div className="p-4 pt-0 flex flex-wrap gap-2 justify-start">
+              {currentScriptedQuestions.map((item) => (
+                <Badge
+                  key={item.id}
+                  variant="outline"
+                  className="cursor-pointer hover:bg-[--chat-accent-color] hover:text-white"
+                  // In preview, this click won't trigger a real AI response.
+                  // It will just show the next set of questions if any.
+                  onClick={() => handleScriptedMessage(item)}
+                >
+                  {item.question}
+                </Badge>
+              ))}
+            </div>
+          )}
         </ScrollArea>
       </CardContent>
       <CardFooter className="p-4 border-t bg-background">
-        <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
+        <form
+          onSubmit={handleSubmit}
+          className="flex w-full items-center space-x-2"
+        >
           <Input
             type="text"
             placeholder="Type your message..."
@@ -176,7 +212,12 @@ export default function ChatbotPreview({
             className="flex-1"
             autoComplete="off"
           />
-          <Button type="submit" size="icon" disabled={!inputValue.trim()} style={{backgroundColor: customization.primaryColor}}>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!inputValue.trim()}
+            style={{ backgroundColor: customization.primaryColor }}
+          >
             <Send className="h-4 w-4" />
             <span className="sr-only">Send</span>
           </Button>

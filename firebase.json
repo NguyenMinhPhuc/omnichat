@@ -1,8 +1,0 @@
-
-{
-  "firestore": {
-    "rules": "firestore.rules"
-  },
-  "project": "omnichat-isnkq"
-}
-
